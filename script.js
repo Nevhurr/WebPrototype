@@ -32,7 +32,18 @@ class ThreeJSRenderer {
             this.setupControls();
             this.animate();
             this.isInitialized = true;
+            
+            // S'assurer que le wireframe CSS reste visible par défaut
+            const wallpaper = document.getElementById('wallpaper');
+            if (wallpaper) {
+                wallpaper.style.opacity = '0.3';
+            }
+            
+            // Initialiser en mode CSS (pas 3D)
+            this.isWireframeInteractive = false;
+            
             console.log('✅ Three.js initialisé avec succès');
+            console.log('ℹ️ Wireframe CSS visible par défaut - Utilisez le bouton pour basculer vers le mode 3D');
         } catch (error) {
             console.error('❌ Erreur lors de l\'initialisation de Three.js:', error);
         }
@@ -548,18 +559,19 @@ class RetroOS {
                     loadingScreen.classList.add('hidden');
                     
                     // Animation séquentielle des éléments
-                    // 1. Wireframe du background (maintenant 3D par défaut)
+                    // 1. Wireframe du background (CSS par défaut, pas 3D automatiquement)
                     setTimeout(() => {
-                        // Activer le wireframe 3D au lieu du CSS
-                        if (this.threeJSRenderer && this.threeJSRenderer.isInitialized) {
-                            this.threeJSRenderer.toggleWireframeInteraction();
-                            
-                            // Mettre à jour le bouton
-                            const wireframeToggle = document.getElementById('wireframe-toggle');
-                            if (wireframeToggle) {
-                                wireframeToggle.classList.add('active');
-                                wireframeToggle.querySelector('span').textContent = 'Wireframe 3D';
-                            }
+                        // Garder le wireframe CSS par défaut, l'utilisateur pourra basculer manuellement
+                        const wallpaper = document.getElementById('wallpaper');
+                        if (wallpaper) {
+                            wallpaper.style.opacity = '0.3';
+                        }
+                        
+                        // Mettre à jour le bouton pour indiquer le mode CSS
+                        const wireframeToggle = document.getElementById('wireframe-toggle');
+                        if (wireframeToggle) {
+                            wireframeToggle.classList.remove('active');
+                            wireframeToggle.querySelector('span').textContent = 'Wireframe CSS';
                         }
                     }, 100);
                     
@@ -731,12 +743,11 @@ class RetroOS {
         this.updateClock();
         this.startClock();
         this.positionWindows();
-        this.initializeThreeJS();
         
-        // Ne plus ouvrir automatiquement la fenêtre du jeu
-        // setTimeout(() => {
-        //     this.testTaskbar();
-        // }, 2000);
+        // Initialiser Three.js en dernier pour s'assurer que tout est prêt
+        setTimeout(() => {
+            this.initializeThreeJS();
+        }, 500);
         
         console.log('🚀 RetroOS initialisé');
     }
@@ -752,7 +763,14 @@ class RetroOS {
                 }
             });
             
+            // S'assurer que le wireframe CSS est visible par défaut
+            const wallpaper = document.getElementById('wallpaper');
+            if (wallpaper) {
+                wallpaper.style.opacity = '0.3';
+            }
+            
             console.log('✅ Three.js intégré dans RetroOS');
+            console.log('ℹ️ Wireframe CSS activé par défaut - Utilisez le bouton pour basculer vers le mode 3D');
         } catch (error) {
             console.error('❌ Erreur lors de l\'intégration de Three.js:', error);
         }
@@ -962,20 +980,44 @@ class RetroOS {
     }
     
     toggleWireframeMode() {
+        const wallpaper = document.getElementById('wallpaper');
+        const wireframeToggle = document.getElementById('wireframe-toggle');
+        
         if (this.threeJSRenderer && this.threeJSRenderer.isInitialized) {
             this.threeJSRenderer.toggleWireframeInteraction();
             
-            // Mettre à jour l'état du bouton
-            const wireframeToggle = document.getElementById('wireframe-toggle');
-            if (wireframeToggle) {
-                if (this.threeJSRenderer.isWireframeInteractive) {
+            // Mettre à jour l'état du bouton et la visibilité
+            if (this.threeJSRenderer.isWireframeInteractive) {
+                // Mode 3D activé
+                if (wireframeToggle) {
                     wireframeToggle.classList.add('active');
                     wireframeToggle.querySelector('span').textContent = 'Wireframe 3D';
-                } else {
+                }
+                if (wallpaper) {
+                    wallpaper.style.opacity = '0'; // Masquer le wireframe CSS
+                }
+                console.log('◊ Mode Wireframe 3D activé');
+            } else {
+                // Mode CSS activé
+                if (wireframeToggle) {
                     wireframeToggle.classList.remove('active');
                     wireframeToggle.querySelector('span').textContent = 'Wireframe CSS';
                 }
+                if (wallpaper) {
+                    wallpaper.style.opacity = '0.3'; // Afficher le wireframe CSS
+                }
+                console.log('◊ Mode Wireframe CSS activé');
             }
+        } else {
+            // Three.js pas encore initialisé, basculer vers le mode CSS
+            if (wireframeToggle) {
+                wireframeToggle.classList.remove('active');
+                wireframeToggle.querySelector('span').textContent = 'Wireframe CSS';
+            }
+            if (wallpaper) {
+                wallpaper.style.opacity = '0.3';
+            }
+            console.log('⚠️ Three.js non initialisé, mode CSS forcé');
         }
     }
     
