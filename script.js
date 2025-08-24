@@ -29,7 +29,6 @@ class ThreeJSRenderer {
             this.setupLights();
             this.setupWireframe();
             this.setupRaycaster();
-            this.setupControls();
             this.animate();
             this.isInitialized = true;
             
@@ -67,14 +66,38 @@ class ThreeJSRenderer {
     
     setupRenderer() {
         const canvas = document.getElementById('threejs-canvas');
+        
+        // Configuration WebGL avec gestion d'erreurs
+        const contextAttributes = {
+            alpha: true,
+            antialias: true,
+            depth: true,
+            stencil: false,
+            powerPreference: 'default',
+            failIfMajorPerformanceCaveat: false,
+            preserveDrawingBuffer: false
+        };
+        
         this.renderer = new THREE.WebGLRenderer({ 
             canvas: canvas,
-            alpha: true,
-            antialias: true
+            context: null,
+            ...contextAttributes
         });
+        
+        // Gestion des erreurs WebGL
+        const gl = this.renderer.getContext();
+        if (gl) {
+            gl.getExtension('WEBGL_lose_context');
+            console.log('✅ Contexte WebGL initialisé avec succès');
+        }
+        
         this.renderer.setSize(window.innerWidth, window.innerHeight);
-        this.renderer.setPixelRatio(window.devicePixelRatio);
+        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Limiter le pixel ratio
         this.renderer.setClearColor(0x000000, 0);
+        
+        // Optimisations de performance
+        this.renderer.shadowMap.enabled = false;
+        this.renderer.shadowMap.type = THREE.BasicShadowMap;
     }
     
     setupLights() {
@@ -101,7 +124,7 @@ class ThreeJSRenderer {
         // Créer la grille wireframe 3D
         this.createWireframeGrid();
         
-        // Créer des points de contrôle interactifs
+        // Créer des contrôles de base (sans interaction complexe)
         this.createWireframeControls();
     }
     
@@ -477,31 +500,40 @@ class ThreeJSRenderer {
     }
     
     animate() {
-        if (!this.isInitialized) return;
-        
-        requestAnimationFrame(() => this.animate());
-        
-        // Animation des fenêtres
-        this.windows.forEach((windowData, appName) => {
-            if (windowData.mesh) {
-                // Effet de flottement subtil
-                windowData.mesh.rotation.z = Math.sin(Date.now() * 0.001) * 0.01;
-            }
-        });
-        
-        // Animation du wireframe 3D
-        if (this.wireframeGroup && this.isWireframeInteractive) {
-            // Animation de pulsation subtile
-            const pulse = Math.sin(Date.now() * 0.002) * 0.05 + 1;
-            this.wireframeGroup.scale.setScalar(pulse);
-            
-            // Animation de rotation continue si activée
-            if (this.wireframeControls.rotation.y !== 0) {
-                this.wireframeGroup.rotation.y += 0.01;
-            }
+        if (!this.isInitialized || !this.renderer || !this.scene || !this.camera) {
+            requestAnimationFrame(() => this.animate());
+            return;
         }
         
-        this.renderer.render(this.scene, this.camera);
+        try {
+            // Animation des fenêtres
+            this.windows.forEach((windowData, appName) => {
+                if (windowData.mesh) {
+                    // Effet de flottement subtil
+                    windowData.mesh.rotation.z = Math.sin(Date.now() * 0.001) * 0.01;
+                }
+            });
+            
+            // Animation du wireframe 3D
+            if (this.wireframeGroup && this.isWireframeInteractive) {
+                // Animation de pulsation subtile
+                const pulse = Math.sin(Date.now() * 0.002) * 0.05 + 1;
+                this.wireframeGroup.scale.setScalar(pulse);
+                
+                // Animation de rotation continue si activée
+                if (this.wireframeControls && this.wireframeControls.rotation.y !== 0) {
+                    this.wireframeGroup.rotation.y += 0.01;
+                }
+            }
+            
+            // Rendu sécurisé
+            this.renderer.render(this.scene, this.camera);
+            
+        } catch (error) {
+            console.warn('⚠️ Erreur lors du rendu Three.js:', error);
+        }
+        
+        requestAnimationFrame(() => this.animate());
     }
     
     onWindowResize() {
@@ -617,9 +649,9 @@ class RetroOS {
                 'images/00107-1051047528.png',
                 'images/header.png',
                 'images/header2.png',
-                // Fichiers du jeu
-                'game/game.html',
-                'game/game.js',
+                // Fichiers du jeu (préchargement passif uniquement)
+                // 'game/game.html', // Éviter le lancement automatique
+                // 'game/game.js',   // Éviter le lancement automatique
                 'game/game.wasm',
                 'game/game.pck',
                 // Three.js (déjà chargé via CDN)
