@@ -11,6 +11,14 @@
     <!-- Écran de chargement -->
     <div id="loading-screen">
         <img src="images/icons/gameiconHD.png" alt="RetroOS" class="loading-logo">
+        <div class="loading-text">Loading<span class="loading-dots">...</span></div>
+        <div class="loading-progress">
+            <div class="loading-bar">
+                <div class="loading-fill" id="loading-fill"></div>
+            </div>
+            <div class="loading-percentage" id="loading-percentage">0%</div>
+        </div>
+        <div class="loading-status" id="loading-status">Initialisation...</div>
     </div>
     
     <!-- Curseur personnalisé -->
@@ -56,6 +64,12 @@
         <div id="start-button" class="taskbar-item">
             <div class="start-icon"></div>
             <span>Démarrer</span>
+        </div>
+        
+        <!-- Bouton de basculement wireframe -->
+        <div id="wireframe-toggle" class="taskbar-item">
+            <div class="wireframe-icon">◊</div>
+            <span>Wireframe 3D</span>
         </div>
         
         <!-- Applications ouvertes -->

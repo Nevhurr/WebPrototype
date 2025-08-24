@@ -12,6 +12,12 @@ class ThreeJSRenderer {
         this.mouse = null;
         this.isInitialized = false;
         
+        // Wireframe 3D
+        this.wireframe = null;
+        this.wireframeGroup = null;
+        this.wireframeControls = null;
+        this.isWireframeInteractive = false;
+        
         this.init();
     }
     
@@ -21,7 +27,9 @@ class ThreeJSRenderer {
             this.setupCamera();
             this.setupRenderer();
             this.setupLights();
+            this.setupWireframe();
             this.setupRaycaster();
+            this.setupControls();
             this.animate();
             this.isInitialized = true;
             console.log('✅ Three.js initialisé avec succès');
@@ -42,7 +50,8 @@ class ThreeJSRenderer {
             0.1, 
             1000
         );
-        this.camera.position.z = 5;
+        this.camera.position.set(0, 0, 8);
+        this.camera.lookAt(0, 0, 0);
     }
     
     setupRenderer() {
@@ -66,11 +75,316 @@ class ThreeJSRenderer {
         const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
         directionalLight.position.set(1, 1, 1);
         this.scene.add(directionalLight);
+        
+        // Lumière ponctuelle pour le wireframe
+        const pointLight = new THREE.PointLight(0xff4444, 0.5, 100);
+        pointLight.position.set(0, 0, 5);
+        this.scene.add(pointLight);
+    }
+    
+    setupWireframe() {
+        // Créer un groupe pour le wireframe
+        this.wireframeGroup = new THREE.Group();
+        this.scene.add(this.wireframeGroup);
+        
+        // Créer la grille wireframe 3D
+        this.createWireframeGrid();
+        
+        // Créer des points de contrôle interactifs
+        this.createWireframeControls();
+    }
+    
+    createWireframeGrid() {
+        // Supprimer l'ancien wireframe s'il existe
+        if (this.wireframe) {
+            this.wireframeGroup.remove(this.wireframe);
+        }
+        
+        // Créer une géométrie de grille
+        const gridSize = 20;
+        const gridDivisions = 20;
+        const gridHelper = new THREE.GridHelper(gridSize, gridDivisions, 0xff4444, 0x333333);
+        
+        // Créer des lignes personnalisées pour plus de contrôle
+        const geometry = new THREE.BufferGeometry();
+        const positions = [];
+        const colors = [];
+        
+        // Lignes horizontales
+        for (let i = 0; i <= gridDivisions; i++) {
+            const y = (i / gridDivisions - 0.5) * gridSize;
+            positions.push(-gridSize/2, y, 0, gridSize/2, y, 0);
+            
+            const color = i === 0 || i === gridDivisions ? 0xff4444 : 0x333333;
+            colors.push(color, color, color, color, color, color);
+        }
+        
+        // Lignes verticales
+        for (let i = 0; i <= gridDivisions; i++) {
+            const x = (i / gridDivisions - 0.5) * gridSize;
+            positions.push(x, -gridSize/2, 0, x, gridSize/2, 0);
+            
+            const color = i === 0 || i === gridDivisions ? 0xff4444 : 0x333333;
+            colors.push(color, color, color, color, color, color);
+        }
+        
+        geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+        geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+        
+        const material = new THREE.LineBasicMaterial({
+            vertexColors: true,
+            transparent: true,
+            opacity: 0.6
+        });
+        
+        this.wireframe = new THREE.LineSegments(geometry, material);
+        this.wireframeGroup.add(this.wireframe);
+        
+        // Ajouter des points de contrôle aux intersections
+        this.addControlPoints(gridSize, gridDivisions);
+    }
+    
+    addControlPoints(gridSize, gridDivisions) {
+        // Créer des sphères aux points d'intersection
+        const sphereGeometry = new THREE.SphereGeometry(0.1, 8, 6);
+        const sphereMaterial = new THREE.MeshBasicMaterial({
+            color: 0xff4444,
+            transparent: true,
+            opacity: 0.8
+        });
+        
+        for (let i = 0; i <= gridDivisions; i++) {
+            for (let j = 0; j <= gridDivisions; j++) {
+                const x = (i / gridDivisions - 0.5) * gridSize;
+                const y = (j / gridDivisions - 0.5) * gridSize;
+                
+                const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
+                sphere.position.set(x, y, 0);
+                sphere.userData = { type: 'controlPoint', gridX: i, gridY: j };
+                
+                this.wireframeGroup.add(sphere);
+            }
+        }
+    }
+    
+    createWireframeControls() {
+        // Créer des contrôles pour manipuler le wireframe
+        this.wireframeControls = {
+            rotation: { x: 0, y: 0, z: 0 },
+            scale: { x: 1, y: 1, z: 1 },
+            position: { x: 0, y: 0, z: 0 },
+            distortion: 0
+        };
+        
+        // Ajouter des contrôles clavier
+        this.setupKeyboardControls();
+    }
+    
+    setupKeyboardControls() {
+        document.addEventListener('keydown', (e) => {
+            if (!this.isWireframeInteractive) return;
+            
+            const step = 0.1;
+            const rotationStep = 0.05;
+            
+            switch(e.key) {
+                case 'ArrowUp':
+                    this.wireframeControls.position.y += step;
+                    break;
+                case 'ArrowDown':
+                    this.wireframeControls.position.y -= step;
+                    break;
+                case 'ArrowLeft':
+                    this.wireframeControls.position.x -= step;
+                    break;
+                case 'ArrowRight':
+                    this.wireframeControls.position.x += step;
+                    break;
+                case 'PageUp':
+                    this.wireframeControls.position.z += step;
+                    break;
+                case 'PageDown':
+                    this.wireframeControls.position.z -= step;
+                    break;
+                case 'r':
+                    this.wireframeControls.rotation.y += rotationStep;
+                    break;
+                case 'R':
+                    this.wireframeControls.rotation.y -= rotationStep;
+                    break;
+                case 't':
+                    this.wireframeControls.rotation.x += rotationStep;
+                    break;
+                case 'T':
+                    this.wireframeControls.rotation.x -= rotationStep;
+                    break;
+                case 'y':
+                    this.wireframeControls.rotation.z += rotationStep;
+                    break;
+                case 'Y':
+                    this.wireframeControls.rotation.z -= rotationStep;
+                    break;
+                case '+':
+                case '=':
+                    this.wireframeControls.scale.x += 0.1;
+                    this.wireframeControls.scale.y += 0.1;
+                    this.wireframeControls.scale.z += 0.1;
+                    break;
+                case '-':
+                    this.wireframeControls.scale.x = Math.max(0.1, this.wireframeControls.scale.x - 0.1);
+                    this.wireframeControls.scale.y = Math.max(0.1, this.wireframeControls.scale.y - 0.1);
+                    this.wireframeControls.scale.z = Math.max(0.1, this.wireframeControls.scale.z - 0.1);
+                    break;
+                case 'd':
+                    this.wireframeControls.distortion += 0.1;
+                    break;
+                case 'D':
+                    this.wireframeControls.distortion = Math.max(0, this.wireframeControls.distortion - 0.1);
+                    break;
+                case ' ':
+                    this.resetWireframe();
+                    break;
+            }
+            
+            this.updateWireframeTransform();
+        });
+    }
+    
+    updateWireframeTransform() {
+        if (!this.wireframeGroup) return;
+        
+        // Appliquer les transformations
+        this.wireframeGroup.position.set(
+            this.wireframeControls.position.x,
+            this.wireframeControls.position.y,
+            this.wireframeControls.position.z
+        );
+        
+        this.wireframeGroup.rotation.set(
+            this.wireframeControls.rotation.x,
+            this.wireframeControls.rotation.y,
+            this.wireframeControls.rotation.z
+        );
+        
+        this.wireframeGroup.scale.set(
+            this.wireframeControls.scale.x,
+            this.wireframeControls.scale.y,
+            this.wireframeControls.scale.z
+        );
+        
+        // Appliquer la déformation
+        this.applyWireframeDistortion();
+    }
+    
+    applyWireframeDistortion() {
+        if (!this.wireframe || !this.wireframe.geometry) return;
+        
+        const distortion = this.wireframeControls.distortion;
+        const positions = this.wireframe.geometry.attributes.position.array;
+        
+        for (let i = 0; i < positions.length; i += 3) {
+            const x = positions[i];
+            const y = positions[i + 1];
+            const z = positions[i + 2];
+            
+            // Appliquer une déformation sinusoïdale
+            const distortionX = Math.sin(y * 0.5) * distortion;
+            const distortionY = Math.cos(x * 0.5) * distortion;
+            
+            positions[i] = x + distortionX;
+            positions[i + 1] = y + distortionY;
+        }
+        
+        this.wireframe.geometry.attributes.position.needsUpdate = true;
+    }
+    
+    resetWireframe() {
+        this.wireframeControls = {
+            rotation: { x: 0, y: 0, z: 0 },
+            scale: { x: 1, y: 1, z: 1 },
+            position: { x: 0, y: 0, z: 0 },
+            distortion: 0
+        };
+        this.updateWireframeTransform();
+    }
+    
+    toggleWireframeInteraction() {
+        this.isWireframeInteractive = !this.isWireframeInteractive;
+        
+        if (this.isWireframeInteractive) {
+            // Masquer le wireframe CSS
+            const wallpaper = document.getElementById('wallpaper');
+            if (wallpaper) {
+                wallpaper.style.opacity = '0';
+            }
+            
+            // Afficher les instructions
+            this.showWireframeInstructions();
+        } else {
+            // Restaurer le wireframe CSS
+            const wallpaper = document.getElementById('wallpaper');
+            if (wallpaper) {
+                wallpaper.style.opacity = '0.3';
+            }
+            
+            // Masquer les instructions
+            this.hideWireframeInstructions();
+        }
+        
+        console.log(`Wireframe 3D ${this.isWireframeInteractive ? 'activé' : 'désactivé'}`);
+    }
+    
+    showWireframeInstructions() {
+        // Créer ou mettre à jour les instructions
+        let instructions = document.getElementById('wireframe-instructions');
+        if (!instructions) {
+            instructions = document.createElement('div');
+            instructions.id = 'wireframe-instructions';
+            instructions.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: rgba(0, 0, 0, 0.8);
+                color: #ff4444;
+                padding: 15px;
+                border: 1px solid #ff4444;
+                border-radius: 5px;
+                font-family: 'Courier New', monospace;
+                font-size: 12px;
+                z-index: 10001;
+                max-width: 250px;
+            `;
+            document.body.appendChild(instructions);
+        }
+        
+        instructions.innerHTML = `
+            <strong>Contrôles Wireframe 3D:</strong><br>
+            • Flèches: Déplacer<br>
+            • R/T/Y: Rotation<br>
+            • +/-: Échelle<br>
+            • D: Déformation<br>
+            • Espace: Reset<br>
+            • Clic: Activer/Désactiver
+        `;
+    }
+    
+    hideWireframeInstructions() {
+        const instructions = document.getElementById('wireframe-instructions');
+        if (instructions) {
+            instructions.remove();
+        }
     }
     
     setupRaycaster() {
         this.raycaster = new THREE.Raycaster();
         this.mouse = new THREE.Vector2();
+        
+        // Ajouter la gestion des clics sur le wireframe
+        document.addEventListener('click', (e) => {
+            if (e.target.id === 'threejs-canvas') {
+                this.toggleWireframeInteraction();
+            }
+        });
     }
     
     createWindowMesh(windowElement, appName) {
@@ -157,6 +471,18 @@ class ThreeJSRenderer {
             }
         });
         
+        // Animation du wireframe 3D
+        if (this.wireframeGroup && this.isWireframeInteractive) {
+            // Animation de pulsation subtile
+            const pulse = Math.sin(Date.now() * 0.002) * 0.05 + 1;
+            this.wireframeGroup.scale.setScalar(pulse);
+            
+            // Animation de rotation continue si activée
+            if (this.wireframeControls.rotation.y !== 0) {
+                this.wireframeGroup.rotation.y += 0.01;
+            }
+        }
+        
         this.renderer.render(this.scene, this.camera);
     }
     
@@ -196,45 +522,199 @@ class RetroOS {
         const startMenu = document.getElementById('start-menu');
         const windowsContainer = document.getElementById('windows-container');
         
-        // Attendre 2.5 secondes
+        // Masquer toutes les fenêtres au démarrage
+        const allWindows = document.querySelectorAll('.window');
+        allWindows.forEach(window => {
+            window.classList.add('hidden');
+        });
+        
+        // Précharger tous les éléments et ressources
+        this.preloadAllResources().then(() => {
+            console.log('✅ Toutes les ressources sont chargées');
+            
+            // Attendre un délai minimum pour l'expérience utilisateur
+            setTimeout(() => {
+                // Faire disparaître l'écran de chargement
+                loadingScreen.classList.add('fade-out');
+                
+                setTimeout(() => {
+                    loadingScreen.classList.add('hidden');
+                    
+                    // Animation séquentielle des éléments
+                    // 1. Wireframe du background (maintenant 3D par défaut)
+                    setTimeout(() => {
+                        // Activer le wireframe 3D au lieu du CSS
+                        if (this.threeJSRenderer && this.threeJSRenderer.isInitialized) {
+                            this.threeJSRenderer.toggleWireframeInteraction();
+                            
+                            // Mettre à jour le bouton
+                            const wireframeToggle = document.getElementById('wireframe-toggle');
+                            if (wireframeToggle) {
+                                wireframeToggle.classList.add('active');
+                                wireframeToggle.querySelector('span').textContent = 'Wireframe 3D';
+                            }
+                        }
+                    }, 100);
+                    
+                    // 2. Reste des éléments RetroOS
+                    setTimeout(() => {
+                        desktop.classList.add('fade-in');
+                    }, 300);
+                    
+                    setTimeout(() => {
+                        taskbar.classList.add('fade-in');
+                    }, 500);
+                    
+                    setTimeout(() => {
+                        startMenu.classList.add('fade-in');
+                    }, 700);
+                    
+                    setTimeout(() => {
+                        windowsContainer.classList.add('fade-in');
+                    }, 900);
+                    
+                    // Initialiser RetroOS après les animations
+                    setTimeout(() => {
+                        this.initializeRetroOS();
+                    }, 1000);
+                    
+                }, 500); // Délai pour la transition de l'écran de chargement
+                
+            }, 1000); // Délai minimum de chargement
+            
+        }).catch(error => {
+            console.error('❌ Erreur lors du préchargement:', error);
+            // En cas d'erreur, continuer quand même
+            this.continueAfterLoading();
+        });
+    }
+    
+    preloadAllResources() {
+        return new Promise((resolve, reject) => {
+            const resources = [
+                // Images
+                'images/icons/gameiconHD.png',
+                'images/icons/gameicon.png',
+                'images/00107-1051047528.png',
+                'images/header.png',
+                'images/header2.png',
+                // Fichiers du jeu
+                'game/game.html',
+                'game/game.js',
+                'game/game.wasm',
+                'game/game.pck',
+                // Three.js (déjà chargé via CDN)
+                // Autres ressources
+                'styles.css',
+                'script.js'
+            ];
+            
+            let loadedCount = 0;
+            const totalResources = resources.length;
+            
+            console.log(`🔄 Préchargement de ${totalResources} ressources...`);
+            this.updateLoadingProgress(0, 'Initialisation...');
+            
+            const checkResource = (url) => {
+                return new Promise((resolveResource) => {
+                    if (url.endsWith('.css') || url.endsWith('.js')) {
+                        // Les fichiers CSS et JS sont déjà chargés
+                        loadedCount++;
+                        this.updateLoadingProgress(loadedCount, totalResources, `Chargement de ${url}`);
+                        resolveResource();
+                        return;
+                    }
+                    
+                    if (url.endsWith('.wasm') || url.endsWith('.pck')) {
+                        // Les fichiers binaires sont plus lents à charger
+                        setTimeout(() => {
+                            loadedCount++;
+                            this.updateLoadingProgress(loadedCount, totalResources, `Chargement de ${url}`);
+                            resolveResource();
+                        }, 500);
+                        return;
+                    }
+                    
+                    const img = new Image();
+                    img.onload = () => {
+                        loadedCount++;
+                        this.updateLoadingProgress(loadedCount, totalResources, `Image chargée: ${url}`);
+                        console.log(`✅ Ressource chargée: ${url}`);
+                        resolveResource();
+                    };
+                    img.onerror = () => {
+                        loadedCount++;
+                        this.updateLoadingProgress(loadedCount, totalResources, `Ressource non trouvée: ${url}`);
+                        console.warn(`⚠️ Ressource non trouvée: ${url}`);
+                        resolveResource(); // Continuer même en cas d'erreur
+                    };
+                    img.src = url;
+                });
+            };
+            
+            // Charger toutes les ressources en parallèle
+            Promise.all(resources.map(checkResource)).then(() => {
+                this.updateLoadingProgress(totalResources, totalResources, 'Chargement terminé !');
+                console.log('✅ Préchargement terminé');
+                resolve();
+            });
+        });
+    }
+    
+    updateLoadingProgress(loaded, total, status) {
+        const loadingFill = document.getElementById('loading-fill');
+        const loadingPercentage = document.getElementById('loading-percentage');
+        const loadingStatus = document.getElementById('loading-status');
+        
+        if (loadingFill && loadingPercentage && loadingStatus) {
+            const percentage = Math.round((loaded / total) * 100);
+            loadingFill.style.width = percentage + '%';
+            loadingPercentage.textContent = percentage + '%';
+            loadingStatus.textContent = status;
+        }
+    }
+    
+    continueAfterLoading() {
+        const loadingScreen = document.getElementById('loading-screen');
+        const wallpaper = document.getElementById('wallpaper');
+        const desktop = document.getElementById('desktop');
+        const taskbar = document.getElementById('taskbar');
+        const startMenu = document.getElementById('start-menu');
+        const windowsContainer = document.getElementById('windows-container');
+        
+        // Faire disparaître l'écran de chargement
+        loadingScreen.classList.add('fade-out');
+        
         setTimeout(() => {
-            // Faire disparaître l'écran de chargement
-            loadingScreen.classList.add('fade-out');
+            loadingScreen.classList.add('hidden');
+            
+            // Animation séquentielle des éléments
+            setTimeout(() => {
+                wallpaper.classList.add('fade-in');
+            }, 100);
             
             setTimeout(() => {
-                loadingScreen.classList.add('hidden');
-                
-                // Animation séquentielle des éléments
-                // 1. Wireframe du background
-                setTimeout(() => {
-                    wallpaper.classList.add('fade-in');
-                }, 100);
-                
-                // 2. Reste des éléments RetroOS
-                setTimeout(() => {
-                    desktop.classList.add('fade-in');
-                }, 300);
-                
-                setTimeout(() => {
-                    taskbar.classList.add('fade-in');
-                }, 500);
-                
-                setTimeout(() => {
-                    startMenu.classList.add('fade-in');
-                }, 700);
-                
-                setTimeout(() => {
-                    windowsContainer.classList.add('fade-in');
-                }, 900);
-                
-                // Initialiser RetroOS après les animations
-                setTimeout(() => {
-                    this.initializeRetroOS();
-                }, 1000);
-                
-            }, 500); // Délai pour la transition de l'écran de chargement
+                desktop.classList.add('fade-in');
+            }, 300);
             
-        }, 2500); // Délai principal de 2.5 secondes
+            setTimeout(() => {
+                taskbar.classList.add('fade-in');
+            }, 500);
+            
+            setTimeout(() => {
+                startMenu.classList.add('fade-in');
+            }, 700);
+            
+            setTimeout(() => {
+                windowsContainer.classList.add('fade-in');
+            }, 900);
+            
+            // Initialiser RetroOS après les animations
+            setTimeout(() => {
+                this.initializeRetroOS();
+            }, 1000);
+            
+        }, 500);
     }
     
     initializeRetroOS() {
@@ -246,10 +726,10 @@ class RetroOS {
         this.positionWindows();
         this.initializeThreeJS();
         
-        // Test de la barre des tâches
-        setTimeout(() => {
-            this.testTaskbar();
-        }, 2000);
+        // Ne plus ouvrir automatiquement la fenêtre du jeu
+        // setTimeout(() => {
+        //     this.testTaskbar();
+        // }, 2000);
         
         console.log('🚀 RetroOS initialisé');
     }
@@ -321,6 +801,18 @@ class RetroOS {
             console.log('✅ Événement attaché au bouton de démarrage');
         } else {
             console.error('❌ Bouton de démarrage non trouvé !');
+        }
+        
+        // Bouton de basculement wireframe
+        const wireframeToggle = document.getElementById('wireframe-toggle');
+        if (wireframeToggle) {
+            wireframeToggle.addEventListener('click', () => {
+                console.log('◊ Bouton wireframe cliqué !');
+                this.toggleWireframeMode();
+            });
+            console.log('✅ Événement attaché au bouton wireframe');
+        } else {
+            console.error('❌ Bouton wireframe non trouvé !');
         }
         
         // Test de débogage pour la barre des tâches
@@ -459,6 +951,24 @@ class RetroOS {
             this.closeStartMenu();
         } else {
             this.openStartMenu();
+        }
+    }
+    
+    toggleWireframeMode() {
+        if (this.threeJSRenderer && this.threeJSRenderer.isInitialized) {
+            this.threeJSRenderer.toggleWireframeInteraction();
+            
+            // Mettre à jour l'état du bouton
+            const wireframeToggle = document.getElementById('wireframe-toggle');
+            if (wireframeToggle) {
+                if (this.threeJSRenderer.isWireframeInteractive) {
+                    wireframeToggle.classList.add('active');
+                    wireframeToggle.querySelector('span').textContent = 'Wireframe 3D';
+                } else {
+                    wireframeToggle.classList.remove('active');
+                    wireframeToggle.querySelector('span').textContent = 'Wireframe CSS';
+                }
+            }
         }
     }
     
@@ -862,25 +1372,27 @@ class RetroOS {
     testTaskbar() {
         console.log('🧪 Test de la barre des tâches...');
         
-        // Ouvrir une fenêtre de test
-        this.openWindow('game');
+        // Ne plus ouvrir automatiquement la fenêtre du jeu
+        // this.openWindow('game');
         
-        setTimeout(() => {
-            // Minimiser la fenêtre
-            this.minimizeWindow('game');
-            console.log('🧪 Fenêtre minimisée, testez le clic dans la barre des tâches');
+        // setTimeout(() => {
+        //     // Minimiser la fenêtre
+        //     this.minimizeWindow('game');
+        //     console.log('🧪 Fenêtre minimisée, testez le clic dans la barre des tâches');
             
-            // Vérifier l'état
-            const windowData = this.windows.get('game');
-            console.log('🧪 État de la fenêtre game:', windowData);
+        //     // Vérifier l'état
+        //     const windowData = this.windows.get('game');
+        //     console.log('🧪 État de la fenêtre game:', windowData);
             
-            const runningApp = document.querySelector('.running-app[data-app="game"]');
-            console.log('🧪 App dans la barre des tâches:', runningApp);
+        //     const runningApp = document.querySelector('.running-app[data-app="game"]');
+        //     console.log('🧪 App dans la barre des tâches:', runningApp);
             
-            if (runningApp) {
-                console.log('🧪 Gestionnaire d\'événement attaché:', runningApp._clickHandler);
-            }
-        }, 1000);
+        //     if (runningApp) {
+        //     console.log('🧪 Gestionnaire d\'événement attaché:', runningApp._clickHandler);
+        //     }
+        // }, 1000);
+        
+        console.log('🧪 Test de la barre des tâches désactivé - Fenêtre du jeu masquée au démarrage');
     }
 
     setupRippleEffect() {
