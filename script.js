@@ -61,12 +61,12 @@ class ThreeJSRenderer {
     
     setupCamera() {
         this.camera = new THREE.PerspectiveCamera(
-            75, 
+            60, // FOV réduit pour une vue plus naturelle
             window.innerWidth / window.innerHeight, 
             0.1, 
             1000
         );
-        this.camera.position.set(0, 0, 8);
+        this.camera.position.set(0, 0, 10); // Position ajustée pour couvrir tout l'écran
         this.camera.lookAt(0, 0, 0);
     }
     
@@ -125,6 +125,10 @@ class ThreeJSRenderer {
     setupWireframe() {
         // Créer un groupe pour le wireframe
         this.wireframeGroup = new THREE.Group();
+        
+        // Positionner le wireframe pour qu'il couvre exactement l'écran
+        this.wireframeGroup.position.set(0, 0, -1); // Légèrement en arrière pour éviter le z-fighting
+        
         this.scene.add(this.wireframeGroup);
         
         // Créer la grille wireframe 3D
@@ -140,44 +144,35 @@ class ThreeJSRenderer {
             this.wireframeGroup.remove(this.wireframe);
         }
         
-        // Créer une géométrie de grille plus dense et interactive
-        const gridSize = 30;
-        const gridDivisions = 30;
+        // Créer une géométrie de grille identique au wireframe CSS
+        const gridSize = 40; // Couvrir tout l'écran
+        const gridDivisions = 20; // Même densité que le CSS
         
         // Créer des lignes personnalisées pour plus de contrôle
         const geometry = new THREE.BufferGeometry();
         const positions = [];
         const colors = [];
         
-        // Lignes horizontales avec plus de points pour la déformation
+        // Lignes horizontales simples (comme le CSS)
         for (let i = 0; i <= gridDivisions; i++) {
             const y = (i / gridDivisions - 0.5) * gridSize;
-            for (let j = 0; j < gridDivisions; j++) {
-                const x1 = (j / gridDivisions - 0.5) * gridSize;
-                const x2 = ((j + 1) / gridDivisions - 0.5) * gridSize;
-                
-                positions.push(x1, y, 0, x2, y, 0);
-                
-                // Couleur basée sur la position pour un effet visuel
-                const intensity = 0.3 + (Math.sin(x1 * 0.1) + Math.cos(y * 0.1)) * 0.2;
-                const color = new THREE.Color().setHSL(0, 1, intensity);
-                colors.push(color.r, color.g, color.b, color.r, color.g, color.b);
-            }
+            positions.push(-gridSize/2, y, 0, gridSize/2, y, 0);
+            
+            // Couleur identique au CSS : gris foncé avec bordures rouges
+            const isBorder = (i === 0 || i === gridDivisions);
+            const color = isBorder ? 0xff4444 : 0x333333;
+            colors.push(color, color, color, color, color, color);
         }
         
-        // Lignes verticales avec plus de points
+        // Lignes verticales simples (comme le CSS)
         for (let i = 0; i <= gridDivisions; i++) {
             const x = (i / gridDivisions - 0.5) * gridSize;
-            for (let j = 0; j < gridDivisions; j++) {
-                const y1 = (j / gridDivisions - 0.5) * gridSize;
-                const y2 = ((j + 1) / gridDivisions - 0.5) * gridSize;
-                
-                positions.push(x, y1, 0, x, y2, 0);
-                
-                const intensity = 0.3 + (Math.sin(x * 0.1) + Math.cos(y1 * 0.1)) * 0.2;
-                const color = new THREE.Color().setHSL(0, 1, intensity);
-                colors.push(color.r, color.g, color.b, color.r, color.g, color.b);
-            }
+            positions.push(x, -gridSize/2, 0, x, gridSize/2, 0);
+            
+            // Couleur identique au CSS : gris foncé avec bordures rouges
+            const isBorder = (i === 0 || i === gridDivisions);
+            const color = isBorder ? 0xff4444 : 0x333333;
+            colors.push(color, color, color, color, color, color);
         }
         
         geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
@@ -186,13 +181,13 @@ class ThreeJSRenderer {
         const material = new THREE.LineBasicMaterial({
             vertexColors: true,
             transparent: true,
-            opacity: 0.8,
+            opacity: 0.3, // Même opacité que le CSS
             linewidth: 1
         });
         
         // Ajouter des propriétés pour l'effet de ripple
         material.userData = {
-            originalOpacity: 0.8,
+            originalOpacity: 0.3,
             rippleIntensity: 0
         };
         
@@ -203,7 +198,7 @@ class ThreeJSRenderer {
         this.originalPositions = new Float32Array(positions);
         this.originalColors = new Float32Array(colors);
         
-        console.log('✅ Wireframe 3D interactif créé avec succès');
+        console.log('✅ Wireframe 3D identique au CSS créé avec succès');
     }
     
     // Méthode supprimée - remplacée par un wireframe plus dense et interactif
@@ -346,39 +341,40 @@ class ThreeJSRenderer {
         const positions = this.wireframe.geometry.attributes.position.array;
         const colors = this.wireframe.geometry.attributes.color.array;
         
-        // Appliquer l'effet de ripple à chaque vertex
+        // Appliquer l'effet de ripple UNIQUEMENT dans le rayon spécifié
         for (let i = 0; i < positions.length; i += 3) {
             const x = positions[i];
             const y = positions[i + 1];
             const z = positions[i + 2];
             
-            // Calculer la distance du centre du ripple
+            // Calculer la distance exacte du centre du ripple
             const distance = Math.sqrt((x - centerX) ** 2 + (y - centerY) ** 2);
             
             if (distance <= radius) {
-                // Calculer l'intensité de l'effet basée sur la distance
+                // Calculer l'intensité de l'effet basée sur la distance (plus forte au centre)
                 const effectStrength = 1 - (distance / radius);
                 const waveEffect = Math.sin(effectStrength * Math.PI) * effectStrength;
                 
-                // Appliquer la déformation
-                const deformationX = Math.sin(x * 0.5 + Date.now() * 0.01) * waveEffect * intensity * 0.5;
-                const deformationY = Math.cos(y * 0.5 + Date.now() * 0.01) * waveEffect * intensity * 0.5;
-                const deformationZ = Math.sin((x + y) * 0.3) * waveEffect * intensity * 0.3;
+                // Déformation subtile uniquement dans le rayon
+                const deformationX = Math.sin(x * 0.3 + Date.now() * 0.005) * waveEffect * intensity * 0.2;
+                const deformationY = Math.cos(y * 0.3 + Date.now() * 0.005) * waveEffect * intensity * 0.2;
+                const deformationZ = Math.sin((x + y) * 0.2) * waveEffect * intensity * 0.1;
                 
+                // Appliquer la déformation aux positions originales
                 positions[i] = this.originalPositions[i] + deformationX;
                 positions[i + 1] = this.originalPositions[i + 1] + deformationY;
                 positions[i + 2] = this.originalPositions[i + 2] + deformationZ;
                 
-                // Modifier les couleurs pour l'effet de lueur
+                // Modifier les couleurs uniquement dans le rayon
                 const colorIndex = i / 3 * 3;
                 if (colors[colorIndex] !== undefined) {
-                    // Augmenter la luminosité et ajouter une teinte rouge
-                    colors[colorIndex] = Math.min(1, colors[colorIndex] + waveEffect * intensity * 0.5);
-                    colors[colorIndex + 1] = Math.max(0, colors[colorIndex + 1] - waveEffect * intensity * 0.3);
-                    colors[colorIndex + 2] = Math.max(0, colors[colorIndex + 2] - waveEffect * intensity * 0.3);
+                    // Augmenter légèrement la luminosité et ajouter une teinte rouge
+                    colors[colorIndex] = Math.min(1, colors[colorIndex] + waveEffect * intensity * 0.3);
+                    colors[colorIndex + 1] = Math.max(0, colors[colorIndex + 1] - waveEffect * intensity * 0.2);
+                    colors[colorIndex + 2] = Math.max(0, colors[colorIndex + 2] - waveEffect * intensity * 0.2);
                 }
             } else {
-                // Restaurer les positions originales pour les vertices hors du ripple
+                // IMPORTANT : Restaurer EXACTEMENT les positions et couleurs originales
                 positions[i] = this.originalPositions[i];
                 positions[i + 1] = this.originalPositions[i + 1];
                 positions[i + 2] = this.originalPositions[i + 2];
@@ -397,9 +393,9 @@ class ThreeJSRenderer {
         this.wireframe.geometry.attributes.position.needsUpdate = true;
         this.wireframe.geometry.attributes.color.needsUpdate = true;
         
-        // Modifier l'opacité du matériau pour l'effet de lueur
+        // Modifier légèrement l'opacité du matériau pour l'effet de lueur
         if (this.wireframe.material) {
-            this.wireframe.material.opacity = this.wireframe.material.userData.originalOpacity + intensity * 0.3;
+            this.wireframe.material.opacity = this.wireframe.material.userData.originalOpacity + intensity * 0.2;
         }
     }
     
@@ -571,15 +567,15 @@ class ThreeJSRenderer {
     createWireframeRipple(centerX, centerY, radius, intensity) {
         if (!this.wireframe) return;
         
-        console.log('🌊 Création d\'un ripple sur le wireframe 3D');
+        console.log('🌊 Création d\'un ripple sur le wireframe 3D à', centerX, centerY, 'rayon:', radius);
         
-        // Appliquer l'effet immédiatement
+        // Appliquer l'effet immédiatement avec le rayon exact
         this.applyRippleEffectToWireframe(centerX, centerY, radius, intensity);
         
-        // Créer une animation de ripple qui s'étend
-        let currentRadius = 0;
-        const maxRadius = radius * 3;
-        const animationDuration = 1000; // 1 seconde
+        // Créer une animation de ripple qui s'étend progressivement
+        let currentRadius = radius * 0.5; // Commencer à la moitié du rayon
+        const maxRadius = radius * 2; // S'étendre jusqu'à 2x le rayon initial
+        const animationDuration = 800; // 800ms pour un effet plus rapide
         const startTime = Date.now();
         
         const animateRipple = () => {
@@ -588,10 +584,10 @@ class ThreeJSRenderer {
             
             if (progress < 1) {
                 // Calculer le rayon actuel avec une fonction d'easing
-                currentRadius = maxRadius * this.easeOutQuart(progress);
+                currentRadius = radius + (maxRadius - radius) * this.easeOutQuart(progress);
                 
-                // Appliquer l'effet avec le rayon actuel
-                const currentIntensity = intensity * (1 - progress);
+                // Appliquer l'effet avec le rayon actuel et une intensité décroissante
+                const currentIntensity = intensity * (1 - progress * 0.7); // Garder un peu d'intensité
                 this.applyRippleEffectToWireframe(centerX, centerY, currentRadius, currentIntensity);
                 
                 requestAnimationFrame(animateRipple);
