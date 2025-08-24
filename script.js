@@ -1519,18 +1519,45 @@ class RetroOS {
         // Vérifier si le renderer Three.js est disponible et actif
         if (!this.threeJSRenderer || !this.threeJSRenderer.isInitialized || 
             !this.threeJSRenderer.wireframe || !this.threeJSRenderer.wireframe.geometry) {
+            console.log('⚠️ Three.js non disponible pour l\'effet de ripple');
             return;
         }
         
         try {
             // Convertir les coordonnées de l'écran en coordonnées du wireframe 3D
-            const rect = document.getElementById('wallpaper').getBoundingClientRect();
-            const normalizedX = (x - rect.width / 2) / (rect.width / 2) * 10; // Échelle du wireframe
-            const normalizedY = -(y - rect.height / 2) / (rect.height / 2) * 10;
+            const rect = document.getElementById('wallpaper');
+            if (!rect) {
+                console.log('⚠️ Élément wallpaper non trouvé');
+                return;
+            }
+            
+            const wallpaperRect = rect.getBoundingClientRect();
+            
+            // Normaliser les coordonnées par rapport au centre de l'écran
+            const centerX = wallpaperRect.width / 2;
+            const centerY = wallpaperRect.height / 2;
+            
+            // Convertir en coordonnées relatives au centre (-1 à 1)
+            const normalizedX = (x - centerX) / centerX;
+            const normalizedY = (y - centerY) / centerY;
+            
+            // Convertir en coordonnées du wireframe 3D (échelle 10x10)
+            const wireframeX = normalizedX * 10;
+            const wireframeY = -normalizedY * 10; // Inverser Y pour Three.js
+            
+            // Calculer le rayon de l'effet (plus grand pour être visible)
+            const effectRadius = Math.max(size / 50, 0.5); // Minimum 0.5 unités
+            
+            console.log(`🌊 Application de l'effet ripple:`, {
+                screenPos: `(${x}, ${y})`,
+                normalized: `(${normalizedX.toFixed(2)}, ${normalizedY.toFixed(2)})`,
+                wireframePos: `(${wireframeX.toFixed(2)}, ${wireframeY.toFixed(2)})`,
+                radius: effectRadius.toFixed(2)
+            });
             
             // Appliquer l'effet avec un délai pour synchroniser avec l'animation CSS
             setTimeout(() => {
-                this.createWireframeShockwave(normalizedX, normalizedY, size / 100, delay);
+                this.createWireframeShockwave(wireframeX, wireframeY, effectRadius, delay);
             }, delay);
             
         } catch (error) {
@@ -1557,16 +1584,19 @@ class RetroOS {
             wireframe.userData.originalColors = new Float32Array(colors);
         }
         
-        // Créer une animation d'onde de choc progressive
+        // Créer une animation d'onde de choc progressive avec effet liquide
         const startTime = Date.now();
-        const animationDuration = 800; // 800ms pour l'animation complète
+        const animationDuration = 1200; // 1.2s pour l'animation complète
+        
+        // Créer des particules d'effet visuel
+        this.createRippleParticles(centerX, centerY, radius);
         
         const animateShockwave = () => {
             const elapsed = Date.now() - startTime;
             const progress = Math.min(elapsed / animationDuration, 1);
             
             // Calculer le rayon actuel de l'onde de choc (expansion progressive)
-            const currentRadius = radius * 3 * progress;
+            const currentRadius = radius * 4 * progress;
             
             // Réinitialiser les positions et couleurs
             for (let i = 0; i < positions.length; i += 3) {
@@ -1582,7 +1612,7 @@ class RetroOS {
                 }
             }
             
-            // Appliquer l'effet d'onde de choc
+            // Appliquer l'effet d'onde de choc liquide
             for (let i = 0; i < positions.length; i += 3) {
                 const x = wireframe.userData.originalPositions[i];
                 const y = wireframe.userData.originalPositions[i + 1];
@@ -1595,24 +1625,38 @@ class RetroOS {
                     // Calculer l'intensité de l'effet (plus fort au centre, diminue avec la distance)
                     const intensity = Math.max(0, 1 - distance / currentRadius);
                     
-                    // Effet de déformation en onde (plus dynamique)
-                    const waveFrequency = 15;
-                    const waveSpeed = Date.now() * 0.02;
-                    const waveEffect = Math.sin(distance * waveFrequency - waveSpeed) * intensity * 0.3;
+                    // Effet de déformation liquide avec plusieurs ondes superposées
+                    const waveSpeed = Date.now() * 0.015;
+                    const wave1 = Math.sin(distance * 8 - waveSpeed) * intensity * 0.8;
+                    const wave2 = Math.sin(distance * 12 - waveSpeed * 1.5) * intensity * 0.6;
+                    const wave3 = Math.cos(distance * 6 - waveSpeed * 0.8) * intensity * 0.4;
                     
-                    // Déformation du wireframe (effet d'onde de choc)
-                    positions[i] = x + waveEffect * 0.15; // Déformation X
-                    positions[i + 1] = y + waveEffect * 0.15; // Déformation Y
-                    positions[i + 2] = z + waveEffect * 0.08; // Déformation Z
+                    // Combiner les ondes pour un effet liquide
+                    const totalWaveEffect = (wave1 + wave2 + wave3) / 3;
                     
-                    // Augmentation de la luminosité de 50% avec effet de pulsation
+                    // Déformation du wireframe (effet liquide prononcé)
+                    positions[i] = x + totalWaveEffect * 0.4; // Déformation X
+                    positions[i + 1] = y + totalWaveEffect * 0.4; // Déformation Y
+                    positions[i + 2] = z + totalWaveEffect * 0.2; // Déformation Z
+                    
+                    // Augmentation de la luminosité avec effet de pulsation liquide
                     const colorIndex = i / 3 * 3;
                     if (colors[colorIndex] !== undefined) {
-                        const brightnessMultiplier = 1.5 + Math.sin(waveSpeed * 2) * 0.2; // 1.3x à 1.7x
+                        // Effet de luminosité pulsante plus prononcé
+                        const brightnessPulse = Math.sin(waveSpeed * 3) * 0.3;
+                        const brightnessMultiplier = 2.0 + brightnessPulse; // 1.7x à 2.3x
                         
+                        // Appliquer l'augmentation de luminosité
                         colors[colorIndex] = Math.min(1, wireframe.userData.originalColors[colorIndex] * brightnessMultiplier);
                         colors[colorIndex + 1] = Math.min(1, wireframe.userData.originalColors[colorIndex + 1] * brightnessMultiplier);
                         colors[colorIndex + 2] = Math.min(1, wireframe.userData.originalColors[colorIndex + 2] * brightnessMultiplier);
+                        
+                        // Ajouter un effet de couleur rougeâtre pour l'onde de choc
+                        if (intensity > 0.5) {
+                            colors[colorIndex] = Math.min(1, colors[colorIndex] + intensity * 0.3);
+                            colors[colorIndex + 1] = Math.max(0, colors[colorIndex + 1] - intensity * 0.2);
+                            colors[colorIndex + 2] = Math.max(0, colors[colorIndex + 2] - intensity * 0.2);
+                        }
                     }
                 }
             }
@@ -1625,10 +1669,10 @@ class RetroOS {
             if (progress < 1) {
                 requestAnimationFrame(animateShockwave);
             } else {
-                // Animation terminée, restaurer l'état original
+                // Animation terminée, restaurer l'état original progressivement
                 setTimeout(() => {
                     this.restoreWireframeOriginalState();
-                }, 200);
+                }, 300);
             }
         };
         
@@ -1638,7 +1682,88 @@ class RetroOS {
         // Effet sur le matériau (opacité et intensité)
         if (material.userData) {
             material.userData.rippleIntensity = 1;
-            material.opacity = Math.min(1, material.userData.originalOpacity * 1.5);
+            material.opacity = Math.min(1, material.userData.originalOpacity * 1.8);
+        }
+        
+        console.log(`🌊 Onde de choc créée à (${centerX.toFixed(2)}, ${centerY.toFixed(2)}) avec rayon ${radius.toFixed(2)}`);
+    }
+    
+    createRippleParticles(centerX, centerY, radius) {
+        if (!this.threeJSRenderer || !this.threeJSRenderer.scene) return;
+        
+        try {
+            // Créer un groupe de particules pour l'effet visuel
+            const particleGroup = new THREE.Group();
+            particleGroup.name = 'ripple-particles';
+            
+            // Créer plusieurs particules
+            const particleCount = 8;
+            for (let i = 0; i < particleCount; i++) {
+                const particle = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.05, 8, 6),
+                    new THREE.MeshBasicMaterial({
+                        color: 0xff4444,
+                        transparent: true,
+                        opacity: 0.8
+                    })
+                );
+                
+                // Positionner les particules en cercle autour du centre
+                const angle = (i / particleCount) * Math.PI * 2;
+                const distance = radius * (0.5 + Math.random() * 0.5);
+                particle.position.set(
+                    centerX + Math.cos(angle) * distance,
+                    centerY + Math.sin(angle) * distance,
+                    0.1
+                );
+                
+                // Animation de la particule
+                particle.userData = {
+                    originalPosition: particle.position.clone(),
+                    startTime: Date.now(),
+                    duration: 1000 + Math.random() * 500
+                };
+                
+                particleGroup.add(particle);
+            }
+            
+            // Ajouter le groupe à la scène
+            this.threeJSRenderer.scene.add(particleGroup);
+            
+            // Animer les particules
+            const animateParticles = () => {
+                let allFinished = true;
+                
+                particleGroup.children.forEach(particle => {
+                    const elapsed = Date.now() - particle.userData.startTime;
+                    const progress = Math.min(elapsed / particle.userData.duration, 1);
+                    
+                    if (progress < 1) {
+                        allFinished = false;
+                        
+                        // Expansion et fade-out
+                        const scale = 1 + progress * 3;
+                        particle.scale.setScalar(scale);
+                        particle.material.opacity = 0.8 * (1 - progress);
+                        
+                        // Mouvement vers l'extérieur
+                        const direction = particle.position.clone().sub(new THREE.Vector3(centerX, centerY, 0)).normalize();
+                        particle.position.copy(particle.userData.originalPosition).add(direction.multiplyScalar(progress * radius * 2));
+                    }
+                });
+                
+                if (!allFinished) {
+                    requestAnimationFrame(animateParticles);
+                } else {
+                    // Nettoyer les particules
+                    this.threeJSRenderer.scene.remove(particleGroup);
+                }
+            };
+            
+            animateParticles();
+            
+        } catch (error) {
+            console.error('❌ Erreur lors de la création des particules:', error);
         }
     }
     
@@ -1649,35 +1774,92 @@ class RetroOS {
         const geometry = wireframe.geometry;
         const material = wireframe.material;
         
-        if (wireframe.userData.originalPositions && wireframe.userData.originalColors) {
-            const positions = geometry.attributes.position.array;
-            const colors = geometry.attributes.color.array;
+        // Créer une animation de restauration fluide avec effet de rebond
+        const startTime = Date.now();
+        const restoreDuration = 800; // 800ms pour la restauration
+        
+        const animateRestore = () => {
+            const elapsed = Date.now() - startTime;
+            const progress = Math.min(elapsed / restoreDuration, 1);
             
-            // Restaurer progressivement les positions originales
-            for (let i = 0; i < positions.length; i += 3) {
-                positions[i] = wireframe.userData.originalPositions[i];
-                positions[i + 1] = wireframe.userData.originalPositions[i + 1];
-                positions[i + 2] = wireframe.userData.originalPositions[i + 2];
-                
-                // Restaurer progressivement les couleurs originales
-                const colorIndex = i / 3 * 3;
-                if (colors[colorIndex] !== undefined) {
-                    colors[colorIndex] = wireframe.userData.originalColors[colorIndex];
-                    colors[colorIndex + 1] = wireframe.userData.originalColors[colorIndex + 1];
-                    colors[colorIndex + 2] = wireframe.userData.originalColors[colorIndex + 2];
+            // Fonction d'easing avec rebond
+            const easeOutBounce = (t) => {
+                if (t < 1 / 2.75) {
+                    return 7.5625 * t * t;
+                } else if (t < 2 / 2.75) {
+                    return 7.5625 * (t -= 1.5 / 2.75) * t + 0.75;
+                } else if (t < 2.5 / 2.75) {
+                    return 7.5625 * (t -= 2.25 / 2.75) * t + 0.9375;
+                } else {
+                    return 7.5625 * (t -= 2.625 / 2.75) * t + 0.984375;
                 }
+            };
+            
+            const easedProgress = easeOutBounce(progress);
+            
+            if (wireframe.userData.originalPositions && wireframe.userData.originalColors) {
+                const positions = geometry.attributes.position.array;
+                const colors = geometry.attributes.color.array;
+                
+                // Restaurer progressivement les positions avec effet de rebond
+                for (let i = 0; i < positions.length; i += 3) {
+                    const originalX = wireframe.userData.originalPositions[i];
+                    const originalY = wireframe.userData.originalPositions[i + 1];
+                    const originalZ = wireframe.userData.originalPositions[i + 2];
+                    
+                    const currentX = positions[i];
+                    const currentY = positions[i + 1];
+                    const currentZ = positions[i + 2];
+                    
+                    // Interpolation avec rebond
+                    positions[i] = currentX + (originalX - currentX) * easedProgress;
+                    positions[i + 1] = currentY + (originalY - currentY) * easedProgress;
+                    positions[i + 2] = currentZ + (originalZ - currentZ) * easedProgress;
+                    
+                    // Restaurer progressivement les couleurs
+                    const colorIndex = i / 3 * 3;
+                    if (colors[colorIndex] !== undefined) {
+                        const originalR = wireframe.userData.originalColors[colorIndex];
+                        const originalG = wireframe.userData.originalColors[colorIndex + 1];
+                        const originalB = wireframe.userData.originalColors[colorIndex + 2];
+                        
+                        const currentR = colors[colorIndex];
+                        const currentG = colors[colorIndex + 1];
+                        const currentB = colors[colorIndex + 2];
+                        
+                        colors[colorIndex] = currentR + (originalR - currentR) * easedProgress;
+                        colors[colorIndex + 1] = currentG + (originalG - currentG) * easedProgress;
+                        colors[colorIndex + 2] = currentB + (originalB - currentB) * easedProgress;
+                    }
+                }
+                
+                // Mettre à jour la géométrie
+                geometry.attributes.position.needsUpdate = true;
+                geometry.attributes.color.needsUpdate = true;
             }
             
-            // Marquer la géométrie comme nécessitant une mise à jour
-            geometry.attributes.position.needsUpdate = true;
-            geometry.attributes.color.needsUpdate = true;
-        }
+            // Restaurer progressivement les propriétés du matériau
+            if (material.userData) {
+                const originalOpacity = material.userData.originalOpacity;
+                const currentOpacity = material.opacity;
+                material.opacity = currentOpacity + (originalOpacity - currentOpacity) * easedProgress;
+            }
+            
+            // Continuer l'animation si elle n'est pas terminée
+            if (progress < 1) {
+                requestAnimationFrame(animateRestore);
+            } else {
+                // Animation terminée, finaliser la restauration
+                if (material.userData) {
+                    material.userData.rippleIntensity = 0;
+                    material.opacity = material.userData.originalOpacity;
+                }
+                console.log('🌊 Restauration du wireframe terminée');
+            }
+        };
         
-        // Restaurer les propriétés du matériau
-        if (material.userData) {
-            material.userData.rippleIntensity = 0;
-            material.opacity = material.userData.originalOpacity;
-        }
+        // Démarrer l'animation de restauration
+        animateRestore();
     }
 }
 

@@ -285,16 +285,20 @@ body {
     position: absolute;
     border-radius: 0;
     background: 
-        radial-gradient(circle, rgba(255, 68, 68, 0.4) 0%, rgba(255, 68, 68, 0.2) 30%, transparent 70%),
-        linear-gradient(90deg, rgba(255, 68, 68, 0.15) 1px, transparent 1px),
-        linear-gradient(rgba(255, 68, 68, 0.15) 1px, transparent 1px);
+        radial-gradient(circle, rgba(255, 68, 68, 0.6) 0%, rgba(255, 68, 68, 0.4) 20%, rgba(255, 68, 68, 0.2) 50%, transparent 80%),
+        linear-gradient(90deg, rgba(255, 68, 68, 0.2) 1px, transparent 1px),
+        linear-gradient(rgba(255, 68, 68, 0.2) 1px, transparent 1px);
     background-size: 100% 100%, 20px 20px, 20px 20px;
     transform: scale(0);
-    animation: wireframeDistort 0.8s ease-out forwards;
+    animation: wireframeDistort 1.2s ease-out forwards;
     pointer-events: none;
     z-index: 0;
     mix-blend-mode: screen;
-    filter: blur(0.5px);
+    filter: blur(0.3px);
+    box-shadow: 
+        0 0 20px rgba(255, 68, 68, 0.3),
+        0 0 40px rgba(255, 68, 68, 0.2),
+        0 0 60px rgba(255, 68, 68, 0.1);
 }
 
 @keyframes rippleEffect {
@@ -325,37 +329,43 @@ body {
         transform: scale(0);
         opacity: 0;
         background-size: 20px 20px;
-        filter: blur(0.5px);
-    }
-    20% {
-        transform: scale(1.1);
-        opacity: 0.6;
-        background-size: 18px 18px;
         filter: blur(0.3px);
+        box-shadow: 0 0 20px rgba(255, 68, 68, 0.3);
     }
-    40% {
-        transform: scale(1.5);
-        opacity: 0.5;
-        background-size: 22px 22px;
+    15% {
+        transform: scale(1.2);
+        opacity: 0.8;
+        background-size: 18px 18px;
         filter: blur(0.2px);
+        box-shadow: 0 0 30px rgba(255, 68, 68, 0.4);
     }
-    60% {
-        transform: scale(2.2);
-        opacity: 0.3;
+    35% {
+        transform: scale(1.8);
+        opacity: 0.6;
+        background-size: 22px 22px;
+        filter: blur(0.1px);
+        box-shadow: 0 0 40px rgba(255, 68, 68, 0.5);
+    }
+    55% {
+        transform: scale(2.5);
+        opacity: 0.4;
         background-size: 19px 19px;
-        filter: blur(0.4px);
+        filter: blur(0.2px);
+        box-shadow: 0 0 50px rgba(255, 68, 68, 0.4);
     }
-    80% {
-        transform: scale(2.8);
+    75% {
+        transform: scale(3.2);
         opacity: 0.2;
         background-size: 21px 21px;
-        filter: blur(0.6px);
+        filter: blur(0.4px);
+        box-shadow: 0 0 60px rgba(255, 68, 68, 0.3);
     }
     100% {
-        transform: scale(3.2);
+        transform: scale(4);
         opacity: 0;
         background-size: 20px 20px;
-        filter: blur(0.8px);
+        filter: blur(0.6px);
+        box-shadow: 0 0 80px rgba(255, 68, 68, 0.1);
     }
 }
 
