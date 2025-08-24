@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RetroOS - Système d'exploitation rétro</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r158/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/examples/js/loaders/GLTFLoader.js"></script>
+</head>
+<body>
+    <!-- Écran de chargement -->
+    <div id="loading-screen">
+        <img src="images/icons/gameiconHD.png" alt="RetroOS" class="loading-logo">
+    </div>
+    
+    <!-- Curseur personnalisé -->
+    <div class="custom-cursor" id="custom-cursor"></div>
+    
+    <!-- Canvas Three.js pour le rendu 3D -->
+    <canvas id="threejs-canvas"></canvas>
+    
+    <!-- Fond d'écran -->
+    <div id="wallpaper"></div>
+    
+    <!-- Zone de travail principale -->
+    <div id="desktop">
+        <!-- Image centrale -->
+        <div id="center-image">
+            <img src="images/00107-1051047528.png" alt="Personnage gothique pixel art">
+        </div>
+        
+        <!-- Icônes du bureau -->
+        <div class="desktop-icon" data-app="game">
+            <div class="icon-image">
+                <img src="images/icons/gameicon.png" alt="Icône du jeu" class="game-icon-img">
+            </div>
+            <div class="icon-label">Jeu Rétro</div>
+        </div>
+        
+        <div class="desktop-icon" data-app="about">
+            <div class="icon-image">◊</div>
+            <div class="icon-label">À propos</div>
+        </div>
+        
+        <div class="desktop-icon" data-app="download">
+            <div class="icon-image">▼</div>
+            <div class="icon-label">Télécharger</div>
+        </div>
+        
+        <div class="desktop-icon" data-app="fumo">
+            <div class="icon-image">🎭</div>
+            <div class="icon-label">FUMO</div>
+        </div>
+        
+
+    </div>
+    
+    <!-- Barre des tâches -->
+    <div id="taskbar">
+        <!-- Bouton de démarrage -->
+        <div id="start-button" class="taskbar-item">
+            <div class="start-icon"></div>
+            <span>Démarrer</span>
+        </div>
+        
+        <!-- Applications ouvertes -->
+        <div id="running-apps" class="taskbar-item">
+            <!-- Les applications ouvertes apparaîtront ici -->
+        </div>
+        
+        <!-- Zone système -->
+        <div id="system-tray" class="taskbar-item">
+            <div class="clock" id="clock">00:00</div>
+            <div class="date" id="date">01/01/2000</div>
+        </div>
+    </div>
+    
+    <!-- Menu de démarrage -->
+    <div id="start-menu" class="hidden">
+        <div class="start-menu-header">
+            <h3>RetroOS</h3>
+            <p>Système rétro années 2000</p>
+        </div>
+        
+        <div class="start-menu-apps">
+            <div class="start-menu-item" data-app="game">
+                <div class="app-icon">
+                    <img src="images/icons/gameicon.png" alt="Icône du jeu" class="game-icon-img-small">
+                </div>
+                <div class="app-info">
+                    <div class="app-name">Jeu Rétro</div>
+                    <div class="app-desc">Jouer au jeu</div>
+                </div>
+            </div>
+            
+            <div class="start-menu-item" data-app="about">
+                <div class="app-icon">◊</div>
+                <div class="app-info">
+                    <div class="app-name">À propos</div>
+                    <div class="app-desc">Informations système</div>
+                </div>
+            </div>
+            
+            <div class="start-menu-item" data-app="download">
+                <div class="app-icon">▼</div>
+                <div class="app-info">
+                    <div class="app-name">Télécharger</div>
+                    <div class="app-desc">Télécharger le jeu</div>
+                </div>
+            </div>
+            
+            <div class="start-menu-item" data-app="fumo">
+                <div class="app-icon">🎭</div>
+                <div class="app-info">
+                    <div class="app-name">FUMO</div>
+                    <div class="app-desc">Animation 3D Fumo</div>
+                </div>
+            </div>
+            
+
+        </div>
+        
+        <div class="start-menu-footer">
+            <div class="start-menu-item" id="shutdown">
+                <div class="app-icon">◼</div>
+                <div class="app-name">Arrêter</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Fenêtres d'applications -->
+    <div id="windows-container">
+        <!-- Fenêtre du jeu -->
+        <div id="game-window" class="window hidden" data-app="game">
+            <div class="window-header">
+                <div class="window-title">◉ Mon Jeu Rétro 2000</div>
+                <div class="window-controls">
+                    <div class="window-control minimize" data-action="minimize">─</div>
+                    <div class="window-control maximize" data-action="maximize">□</div>
+                    <div class="window-control close" data-action="close">×</div>
+                </div>
+            </div>
+            <div class="window-content">
+                <div class="game-content">
+                    <h1>Mon Jeu Rétro 2000</h1>
+                    <p><strong>Bêta disponible - Jouez maintenant !</strong></p>
+                    <p>Un jeu web rétro inspiré des années 2000, avec des graphismes pixelisés et une gameplay nostalgique.</p>
+                    
+                    <div class="game-frame-container">
+                        <iframe 
+                            src="game/game.html" 
+                            class="game-frame"
+                            title="Mon Jeu Rétro 2000"
+                            allowfullscreen>
+                        </iframe>
+                    </div>
+                    
+                    <div class="game-actions">
+                        <button class="play-button">◉ Jouer Maintenant</button>
+                        <button class="download-button">▼ Télécharger</button>
+                    </div>
+                    
+                    <h2>Fonctionnalités</h2>
+                    <ul>
+                        <li>◉ Gameplay rétro authentique</li>
+                        <li>◊ Contrôles simples</li>
+                        <li>◆ Effets visuels années 2000</li>
+                        <li>◼ Système de score</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Fenêtre À propos -->
+        <div id="about-window" class="window hidden" data-app="about">
+            <div class="window-header">
+                <div class="window-title">◊ À propos de RetroOS</div>
+                <div class="window-controls">
+                    <div class="window-control minimize" data-action="minimize">─</div>
+                    <div class="window-control maximize" data-action="maximize">□</div>
+                    <div class="window-control close" data-action="close">×</div>
+                </div>
+            </div>
+            <div class="window-content">
+                <div class="about-content">
+                    <h2>RetroOS</h2>
+                    <p>Un système d'exploitation rétro inspiré des années 2000, créé avec des technologies web modernes.</p>
+                    
+                    <h3>Caractéristiques</h3>
+                    <ul>
+                        <li>Interface de bureau rétro</li>
+                        <li>Barre des tâches fonctionnelle</li>
+                        <li>Menu de démarrage</li>
+                        <li>Fenêtres redimensionnables</li>
+                        <li>Thème années 2000</li>
+                    </ul>
+                    
+                    <h3>Technologies</h3>
+                    <p>HTML5, CSS3, JavaScript vanilla</p>
+                    
+                    <h3>Version</h3>
+                    <p>1.0.0 - Bêta</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Fenêtre Télécharger -->
+        <div id="download-window" class="window hidden" data-app="download">
+            <div class="window-header">
+                <div class="window-title">▼ Télécharger</div>
+                <div class="window-controls">
+                    <div class="window-control minimize" data-action="minimize">─</div>
+                    <div class="window-control maximize" data-action="maximize">□</div>
+                    <div class="window-control close" data-action="close">×</div>
+                </div>
+            </div>
+            <div class="window-content">
+                <div class="download-content">
+                    <h2>Télécharger Mon Jeu Rétro 2000</h2>
+                    <p>Choisissez votre plateforme :</p>
+                    
+                    <div class="download-options">
+                        <div class="download-option">
+                            <h3>🌐 Version Web</h3>
+                            <p>Jouez directement dans votre navigateur</p>
+                            <button class="download-btn">Jouer en ligne</button>
+                        </div>
+                        
+                        <div class="download-option">
+                            <h3>💻 Version PC</h3>
+                            <p>Version standalone pour Windows</p>
+                            <button class="download-btn">Télécharger .exe</button>
+                        </div>
+                        
+                        <div class="download-option">
+                            <h3>📱 Version Mobile</h3>
+                            <p>Application mobile Android/iOS</p>
+                            <button class="download-btn">Télécharger APK</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Fenêtre FUMO -->
+        <div id="fumo-window" class="window hidden" data-app="fumo">
+            <div class="window-header">
+                <div class="window-title">🎭 FUMO - Animation 3D</div>
+                <div class="window-controls">
+                    <div class="window-control minimize" data-action="minimize">─</div>
+                    <div class="window-control maximize" data-action="maximize">□</div>
+                    <div class="window-control close" data-action="close">×</div>
+                </div>
+            </div>
+            <div class="window-content">
+                <div class="fumo-content">
+                    <div id="fumo-canvas-container">
+                        <canvas id="fumo-canvas"></canvas>
+                    </div>
+                    <div class="fumo-controls">
+                        <button id="restart-fumo" class="fumo-btn">🔄 Redémarrer</button>
+                        <button id="pause-fumo" class="fumo-btn">⏸️ Pause</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+
+    </div>
+    
+    <!-- Scripts -->
+    <script src="script.js"></script>
+</body>
+</html>
