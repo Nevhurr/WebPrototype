@@ -134,8 +134,15 @@ class ThreeJSRenderer {
         const material = new THREE.LineBasicMaterial({
             vertexColors: true,
             transparent: true,
-            opacity: 0.6
+            opacity: 0.6,
+            linewidth: 1
         });
+        
+        // Ajouter des propriétés pour l'effet de ripple
+        material.userData = {
+            originalOpacity: 0.6,
+            rippleIntensity: 0
+        };
         
         this.wireframe = new THREE.LineSegments(geometry, material);
         this.wireframeGroup.add(this.wireframe);
@@ -1486,6 +1493,9 @@ class RetroOS {
                 target.appendChild(ripple);
                 this.activeRipples++;
                 
+                // Appliquer l'effet de déformation et de luminosité au wireframe 3D
+                this.applyWireframeRippleEffect(x, y, size, i * 50);
+                
                 console.log(`🎨 Ripple ${i + 1} ajouté, total actif: ${this.activeRipples}`);
                 
                 // Nettoyer après l'animation
@@ -1502,6 +1512,171 @@ class RetroOS {
             }
         } catch (error) {
             console.error('❌ Erreur lors de la création du ripple:', error);
+        }
+    }
+    
+    applyWireframeRippleEffect(x, y, size, delay) {
+        // Vérifier si le renderer Three.js est disponible et actif
+        if (!this.threeJSRenderer || !this.threeJSRenderer.isInitialized || 
+            !this.threeJSRenderer.wireframe || !this.threeJSRenderer.wireframe.geometry) {
+            return;
+        }
+        
+        try {
+            // Convertir les coordonnées de l'écran en coordonnées du wireframe 3D
+            const rect = document.getElementById('wallpaper').getBoundingClientRect();
+            const normalizedX = (x - rect.width / 2) / (rect.width / 2) * 10; // Échelle du wireframe
+            const normalizedY = -(y - rect.height / 2) / (rect.height / 2) * 10;
+            
+            // Appliquer l'effet avec un délai pour synchroniser avec l'animation CSS
+            setTimeout(() => {
+                this.createWireframeShockwave(normalizedX, normalizedY, size / 100, delay);
+            }, delay);
+            
+        } catch (error) {
+            console.error('❌ Erreur lors de l\'application de l\'effet ripple au wireframe:', error);
+        }
+    }
+    
+    createWireframeShockwave(centerX, centerY, radius, delay) {
+        if (!this.threeJSRenderer || !this.threeJSRenderer.wireframe) return;
+        
+        const wireframe = this.threeJSRenderer.wireframe;
+        const geometry = wireframe.geometry;
+        const material = wireframe.material;
+        const positions = geometry.attributes.position.array;
+        const colors = geometry.attributes.color.array;
+        
+        // Créer une copie des positions originales si elle n'existe pas
+        if (!wireframe.userData.originalPositions) {
+            wireframe.userData.originalPositions = new Float32Array(positions);
+        }
+        
+        // Créer une copie des couleurs originales si elle n'existe pas
+        if (!wireframe.userData.originalColors) {
+            wireframe.userData.originalColors = new Float32Array(colors);
+        }
+        
+        // Créer une animation d'onde de choc progressive
+        const startTime = Date.now();
+        const animationDuration = 800; // 800ms pour l'animation complète
+        
+        const animateShockwave = () => {
+            const elapsed = Date.now() - startTime;
+            const progress = Math.min(elapsed / animationDuration, 1);
+            
+            // Calculer le rayon actuel de l'onde de choc (expansion progressive)
+            const currentRadius = radius * 3 * progress;
+            
+            // Réinitialiser les positions et couleurs
+            for (let i = 0; i < positions.length; i += 3) {
+                positions[i] = wireframe.userData.originalPositions[i];
+                positions[i + 1] = wireframe.userData.originalPositions[i + 1];
+                positions[i + 2] = wireframe.userData.originalPositions[i + 2];
+                
+                const colorIndex = i / 3 * 3;
+                if (colors[colorIndex] !== undefined) {
+                    colors[colorIndex] = wireframe.userData.originalColors[colorIndex];
+                    colors[colorIndex + 1] = wireframe.userData.originalColors[colorIndex + 1];
+                    colors[colorIndex + 2] = wireframe.userData.originalColors[colorIndex + 2];
+                }
+            }
+            
+            // Appliquer l'effet d'onde de choc
+            for (let i = 0; i < positions.length; i += 3) {
+                const x = wireframe.userData.originalPositions[i];
+                const y = wireframe.userData.originalPositions[i + 1];
+                const z = wireframe.userData.originalPositions[i + 2];
+                
+                // Calculer la distance du point au centre de l'onde de choc
+                const distance = Math.sqrt((x - centerX) ** 2 + (y - centerY) ** 2);
+                
+                if (distance <= currentRadius) {
+                    // Calculer l'intensité de l'effet (plus fort au centre, diminue avec la distance)
+                    const intensity = Math.max(0, 1 - distance / currentRadius);
+                    
+                    // Effet de déformation en onde (plus dynamique)
+                    const waveFrequency = 15;
+                    const waveSpeed = Date.now() * 0.02;
+                    const waveEffect = Math.sin(distance * waveFrequency - waveSpeed) * intensity * 0.3;
+                    
+                    // Déformation du wireframe (effet d'onde de choc)
+                    positions[i] = x + waveEffect * 0.15; // Déformation X
+                    positions[i + 1] = y + waveEffect * 0.15; // Déformation Y
+                    positions[i + 2] = z + waveEffect * 0.08; // Déformation Z
+                    
+                    // Augmentation de la luminosité de 50% avec effet de pulsation
+                    const colorIndex = i / 3 * 3;
+                    if (colors[colorIndex] !== undefined) {
+                        const brightnessMultiplier = 1.5 + Math.sin(waveSpeed * 2) * 0.2; // 1.3x à 1.7x
+                        
+                        colors[colorIndex] = Math.min(1, wireframe.userData.originalColors[colorIndex] * brightnessMultiplier);
+                        colors[colorIndex + 1] = Math.min(1, wireframe.userData.originalColors[colorIndex + 1] * brightnessMultiplier);
+                        colors[colorIndex + 2] = Math.min(1, wireframe.userData.originalColors[colorIndex + 2] * brightnessMultiplier);
+                    }
+                }
+            }
+            
+            // Mettre à jour la géométrie
+            geometry.attributes.position.needsUpdate = true;
+            geometry.attributes.color.needsUpdate = true;
+            
+            // Continuer l'animation si elle n'est pas terminée
+            if (progress < 1) {
+                requestAnimationFrame(animateShockwave);
+            } else {
+                // Animation terminée, restaurer l'état original
+                setTimeout(() => {
+                    this.restoreWireframeOriginalState();
+                }, 200);
+            }
+        };
+        
+        // Démarrer l'animation
+        animateShockwave();
+        
+        // Effet sur le matériau (opacité et intensité)
+        if (material.userData) {
+            material.userData.rippleIntensity = 1;
+            material.opacity = Math.min(1, material.userData.originalOpacity * 1.5);
+        }
+    }
+    
+    restoreWireframeOriginalState() {
+        if (!this.threeJSRenderer || !this.threeJSRenderer.wireframe) return;
+        
+        const wireframe = this.threeJSRenderer.wireframe;
+        const geometry = wireframe.geometry;
+        const material = wireframe.material;
+        
+        if (wireframe.userData.originalPositions && wireframe.userData.originalColors) {
+            const positions = geometry.attributes.position.array;
+            const colors = geometry.attributes.color.array;
+            
+            // Restaurer progressivement les positions originales
+            for (let i = 0; i < positions.length; i += 3) {
+                positions[i] = wireframe.userData.originalPositions[i];
+                positions[i + 1] = wireframe.userData.originalPositions[i + 1];
+                positions[i + 2] = wireframe.userData.originalPositions[i + 2];
+                
+                // Restaurer progressivement les couleurs originales
+                const colorIndex = i / 3 * 3;
+                if (colors[colorIndex] !== undefined) {
+                    colors[colorIndex] = wireframe.userData.originalColors[colorIndex];
+                    colors[colorIndex + 1] = wireframe.userData.originalColors[colorIndex + 1];
+                    colors[colorIndex + 2] = wireframe.userData.originalColors[colorIndex + 2];
+                }
+            }
+            
+            // Marquer la géométrie comme nécessitant une mise à jour
+            geometry.attributes.position.needsUpdate = true;
+            geometry.attributes.color.needsUpdate = true;
+        }
+        
+        // Restaurer les propriétés du matériau
+        if (material.userData) {
+            material.userData.rippleIntensity = 0;
+            material.opacity = material.userData.originalOpacity;
         }
     }
 }
