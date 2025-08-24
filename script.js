@@ -41,6 +41,12 @@ class ThreeJSRenderer {
             // Initialiser en mode CSS (pas 3D)
             this.isWireframeInteractive = false;
             
+            // Masquer le wireframe 3D par défaut
+            if (this.wireframe) {
+                this.wireframe.visible = false;
+                this.wireframeGroup.visible = false;
+            }
+            
             console.log('✅ Three.js initialisé avec succès');
             console.log('ℹ️ Wireframe CSS visible par défaut - Utilisez le bouton pour basculer vers le mode 3D');
         } catch (error) {
@@ -134,32 +140,44 @@ class ThreeJSRenderer {
             this.wireframeGroup.remove(this.wireframe);
         }
         
-        // Créer une géométrie de grille
-        const gridSize = 20;
-        const gridDivisions = 20;
-        const gridHelper = new THREE.GridHelper(gridSize, gridDivisions, 0xff4444, 0x333333);
+        // Créer une géométrie de grille plus dense et interactive
+        const gridSize = 30;
+        const gridDivisions = 30;
         
         // Créer des lignes personnalisées pour plus de contrôle
         const geometry = new THREE.BufferGeometry();
         const positions = [];
         const colors = [];
         
-        // Lignes horizontales
+        // Lignes horizontales avec plus de points pour la déformation
         for (let i = 0; i <= gridDivisions; i++) {
             const y = (i / gridDivisions - 0.5) * gridSize;
-            positions.push(-gridSize/2, y, 0, gridSize/2, y, 0);
-            
-            const color = i === 0 || i === gridDivisions ? 0xff4444 : 0x333333;
-            colors.push(color, color, color, color, color, color);
+            for (let j = 0; j < gridDivisions; j++) {
+                const x1 = (j / gridDivisions - 0.5) * gridSize;
+                const x2 = ((j + 1) / gridDivisions - 0.5) * gridSize;
+                
+                positions.push(x1, y, 0, x2, y, 0);
+                
+                // Couleur basée sur la position pour un effet visuel
+                const intensity = 0.3 + (Math.sin(x1 * 0.1) + Math.cos(y * 0.1)) * 0.2;
+                const color = new THREE.Color().setHSL(0, 1, intensity);
+                colors.push(color.r, color.g, color.b, color.r, color.g, color.b);
+            }
         }
         
-        // Lignes verticales
+        // Lignes verticales avec plus de points
         for (let i = 0; i <= gridDivisions; i++) {
             const x = (i / gridDivisions - 0.5) * gridSize;
-            positions.push(x, -gridSize/2, 0, x, gridSize/2, 0);
-            
-            const color = i === 0 || i === gridDivisions ? 0xff4444 : 0x333333;
-            colors.push(color, color, color, color, color, color);
+            for (let j = 0; j < gridDivisions; j++) {
+                const y1 = (j / gridDivisions - 0.5) * gridSize;
+                const y2 = ((j + 1) / gridDivisions - 0.5) * gridSize;
+                
+                positions.push(x, y1, 0, x, y2, 0);
+                
+                const intensity = 0.3 + (Math.sin(x * 0.1) + Math.cos(y1 * 0.1)) * 0.2;
+                const color = new THREE.Color().setHSL(0, 1, intensity);
+                colors.push(color.r, color.g, color.b, color.r, color.g, color.b);
+            }
         }
         
         geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
@@ -168,45 +186,27 @@ class ThreeJSRenderer {
         const material = new THREE.LineBasicMaterial({
             vertexColors: true,
             transparent: true,
-            opacity: 0.6,
+            opacity: 0.8,
             linewidth: 1
         });
         
         // Ajouter des propriétés pour l'effet de ripple
         material.userData = {
-            originalOpacity: 0.6,
+            originalOpacity: 0.8,
             rippleIntensity: 0
         };
         
         this.wireframe = new THREE.LineSegments(geometry, material);
         this.wireframeGroup.add(this.wireframe);
         
-        // Ajouter des points de contrôle aux intersections
-        this.addControlPoints(gridSize, gridDivisions);
+        // Stocker les positions originales pour la déformation
+        this.originalPositions = new Float32Array(positions);
+        this.originalColors = new Float32Array(colors);
+        
+        console.log('✅ Wireframe 3D interactif créé avec succès');
     }
     
-    addControlPoints(gridSize, gridDivisions) {
-        // Créer des sphères aux points d'intersection
-        const sphereGeometry = new THREE.SphereGeometry(0.1, 8, 6);
-        const sphereMaterial = new THREE.MeshBasicMaterial({
-            color: 0xff4444,
-            transparent: true,
-            opacity: 0.8
-        });
-        
-        for (let i = 0; i <= gridDivisions; i++) {
-            for (let j = 0; j <= gridDivisions; j++) {
-                const x = (i / gridDivisions - 0.5) * gridSize;
-                const y = (j / gridDivisions - 0.5) * gridSize;
-                
-                const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
-                sphere.position.set(x, y, 0);
-                sphere.userData = { type: 'controlPoint', gridX: i, gridY: j };
-                
-                this.wireframeGroup.add(sphere);
-            }
-        }
-    }
+    // Méthode supprimée - remplacée par un wireframe plus dense et interactif
     
     createWireframeControls() {
         // Créer des contrôles pour manipuler le wireframe
@@ -339,6 +339,96 @@ class ThreeJSRenderer {
         this.wireframe.geometry.attributes.position.needsUpdate = true;
     }
     
+    // Nouvelle méthode pour appliquer l'effet de ripple au wireframe 3D
+    applyRippleEffectToWireframe(centerX, centerY, radius, intensity) {
+        if (!this.wireframe || !this.wireframe.geometry || !this.originalPositions) return;
+        
+        const positions = this.wireframe.geometry.attributes.position.array;
+        const colors = this.wireframe.geometry.attributes.color.array;
+        
+        // Appliquer l'effet de ripple à chaque vertex
+        for (let i = 0; i < positions.length; i += 3) {
+            const x = positions[i];
+            const y = positions[i + 1];
+            const z = positions[i + 2];
+            
+            // Calculer la distance du centre du ripple
+            const distance = Math.sqrt((x - centerX) ** 2 + (y - centerY) ** 2);
+            
+            if (distance <= radius) {
+                // Calculer l'intensité de l'effet basée sur la distance
+                const effectStrength = 1 - (distance / radius);
+                const waveEffect = Math.sin(effectStrength * Math.PI) * effectStrength;
+                
+                // Appliquer la déformation
+                const deformationX = Math.sin(x * 0.5 + Date.now() * 0.01) * waveEffect * intensity * 0.5;
+                const deformationY = Math.cos(y * 0.5 + Date.now() * 0.01) * waveEffect * intensity * 0.5;
+                const deformationZ = Math.sin((x + y) * 0.3) * waveEffect * intensity * 0.3;
+                
+                positions[i] = this.originalPositions[i] + deformationX;
+                positions[i + 1] = this.originalPositions[i + 1] + deformationY;
+                positions[i + 2] = this.originalPositions[i + 2] + deformationZ;
+                
+                // Modifier les couleurs pour l'effet de lueur
+                const colorIndex = i / 3 * 3;
+                if (colors[colorIndex] !== undefined) {
+                    // Augmenter la luminosité et ajouter une teinte rouge
+                    colors[colorIndex] = Math.min(1, colors[colorIndex] + waveEffect * intensity * 0.5);
+                    colors[colorIndex + 1] = Math.max(0, colors[colorIndex + 1] - waveEffect * intensity * 0.3);
+                    colors[colorIndex + 2] = Math.max(0, colors[colorIndex + 2] - waveEffect * intensity * 0.3);
+                }
+            } else {
+                // Restaurer les positions originales pour les vertices hors du ripple
+                positions[i] = this.originalPositions[i];
+                positions[i + 1] = this.originalPositions[i + 1];
+                positions[i + 2] = this.originalPositions[i + 2];
+                
+                // Restaurer les couleurs originales
+                const colorIndex = i / 3 * 3;
+                if (colors[colorIndex] !== undefined && this.originalColors[colorIndex] !== undefined) {
+                    colors[colorIndex] = this.originalColors[colorIndex];
+                    colors[colorIndex + 1] = this.originalColors[colorIndex + 1];
+                    colors[colorIndex + 2] = this.originalColors[colorIndex + 2];
+                }
+            }
+        }
+        
+        // Mettre à jour la géométrie
+        this.wireframe.geometry.attributes.position.needsUpdate = true;
+        this.wireframe.geometry.attributes.color.needsUpdate = true;
+        
+        // Modifier l'opacité du matériau pour l'effet de lueur
+        if (this.wireframe.material) {
+            this.wireframe.material.opacity = this.wireframe.material.userData.originalOpacity + intensity * 0.3;
+        }
+    }
+    
+    // Méthode pour restaurer le wireframe à son état original
+    restoreWireframeOriginalState() {
+        if (!this.wireframe || !this.wireframe.geometry || !this.originalPositions || !this.originalColors) return;
+        
+        const positions = this.wireframe.geometry.attributes.position.array;
+        const colors = this.wireframe.geometry.attributes.color.array;
+        
+        // Restaurer toutes les positions et couleurs
+        for (let i = 0; i < positions.length; i++) {
+            positions[i] = this.originalPositions[i];
+        }
+        
+        for (let i = 0; i < colors.length; i++) {
+            colors[i] = this.originalColors[i];
+        }
+        
+        // Mettre à jour la géométrie
+        this.wireframe.geometry.attributes.position.needsUpdate = true;
+        this.wireframe.geometry.attributes.color.needsUpdate = true;
+        
+        // Restaurer l'opacité du matériau
+        if (this.wireframe.material) {
+            this.wireframe.material.opacity = this.wireframe.material.userData.originalOpacity;
+        }
+    }
+    
     resetWireframe() {
         this.wireframeControls = {
             rotation: { x: 0, y: 0, z: 0 },
@@ -359,8 +449,16 @@ class ThreeJSRenderer {
                 wallpaper.style.opacity = '0';
             }
             
+            // S'assurer que le wireframe 3D est visible
+            if (this.wireframe) {
+                this.wireframe.visible = true;
+                this.wireframeGroup.visible = true;
+            }
+            
             // Afficher les instructions
             this.showWireframeInstructions();
+            
+            console.log('◊ Mode Wireframe 3D activé - Cliquez pour créer des ripples !');
         } else {
             // Restaurer le wireframe CSS
             const wallpaper = document.getElementById('wallpaper');
@@ -368,8 +466,16 @@ class ThreeJSRenderer {
                 wallpaper.style.opacity = '0.3';
             }
             
+            // Masquer le wireframe 3D
+            if (this.wireframe) {
+                this.wireframe.visible = false;
+                this.wireframeGroup.visible = false;
+            }
+            
             // Masquer les instructions
             this.hideWireframeInstructions();
+            
+            console.log('◊ Mode Wireframe CSS activé');
         }
         
         console.log(`Wireframe 3D ${this.isWireframeInteractive ? 'activé' : 'désactivé'}`);
@@ -426,6 +532,82 @@ class ThreeJSRenderer {
                 this.toggleWireframeInteraction();
             }
         });
+        
+        // Gestion des clics pour l'effet de ripple sur le wireframe 3D
+        document.addEventListener('click', (e) => {
+            if (this.isWireframeInteractive && this.wireframe) {
+                this.handleWireframeClick(e);
+            }
+        });
+    }
+    
+    // Nouvelle méthode pour gérer les clics sur le wireframe 3D
+    handleWireframeClick(event) {
+        if (!this.wireframe || !this.camera || !this.renderer) return;
+        
+        // Convertir les coordonnées de la souris en coordonnées normalisées
+        const rect = this.renderer.domElement.getBoundingClientRect();
+        this.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+        this.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+        
+        // Lancer un rayon depuis la caméra
+        this.raycaster.setFromCamera(this.mouse, this.camera);
+        
+        // Vérifier l'intersection avec le wireframe
+        const intersects = this.raycaster.intersectObject(this.wireframe);
+        
+        if (intersects.length > 0) {
+            const intersection = intersects[0];
+            const worldPoint = intersection.point;
+            
+            console.log('🎯 Clic détecté sur le wireframe 3D à:', worldPoint);
+            
+            // Créer l'effet de ripple
+            this.createWireframeRipple(worldPoint.x, worldPoint.y, 5, 1.0);
+        }
+    }
+    
+    // Méthode pour créer un effet de ripple sur le wireframe 3D
+    createWireframeRipple(centerX, centerY, radius, intensity) {
+        if (!this.wireframe) return;
+        
+        console.log('🌊 Création d\'un ripple sur le wireframe 3D');
+        
+        // Appliquer l'effet immédiatement
+        this.applyRippleEffectToWireframe(centerX, centerY, radius, intensity);
+        
+        // Créer une animation de ripple qui s'étend
+        let currentRadius = 0;
+        const maxRadius = radius * 3;
+        const animationDuration = 1000; // 1 seconde
+        const startTime = Date.now();
+        
+        const animateRipple = () => {
+            const elapsed = Date.now() - startTime;
+            const progress = elapsed / animationDuration;
+            
+            if (progress < 1) {
+                // Calculer le rayon actuel avec une fonction d'easing
+                currentRadius = maxRadius * this.easeOutQuart(progress);
+                
+                // Appliquer l'effet avec le rayon actuel
+                const currentIntensity = intensity * (1 - progress);
+                this.applyRippleEffectToWireframe(centerX, centerY, currentRadius, currentIntensity);
+                
+                requestAnimationFrame(animateRipple);
+            } else {
+                // Restaurer l'état original
+                this.restoreWireframeOriginalState();
+                console.log('✅ Ripple sur le wireframe 3D terminé');
+            }
+        };
+        
+        animateRipple();
+    }
+    
+    // Fonction d'easing pour une animation fluide
+    easeOutQuart(t) {
+        return 1 - Math.pow(1 - t, 4);
     }
     
     createWindowMesh(windowElement, appName) {
