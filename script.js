@@ -32,23 +32,17 @@ class ThreeJSRenderer {
             this.animate();
             this.isInitialized = true;
             
-            // S'assurer que le wireframe CSS reste visible par défaut
-            const wallpaper = document.getElementById('wallpaper');
-            if (wallpaper) {
-                wallpaper.style.opacity = '0.3';
-            }
-            
-            // Initialiser en mode CSS (pas 3D)
-            this.isWireframeInteractive = false;
-            
-            // Masquer le wireframe 3D par défaut
+            // Masquer complètement le wireframe 3D au démarrage
             if (this.wireframe) {
                 this.wireframe.visible = false;
                 this.wireframeGroup.visible = false;
             }
             
+            // Désactiver complètement le mode 3D
+            this.isWireframeInteractive = false;
+            
             console.log('✅ Three.js initialisé avec succès');
-            console.log('ℹ️ Wireframe CSS visible par défaut - Utilisez le bouton pour basculer vers le mode 3D');
+            console.log('ℹ️ Wireframe 3D désactivé par défaut');
         } catch (error) {
             console.error('❌ Erreur lors de l\'initialisation de Three.js:', error);
         }
@@ -185,10 +179,9 @@ class ThreeJSRenderer {
             linewidth: 1
         });
         
-        // Ajouter des propriétés pour l'effet de ripple
+        // Ajouter des propriétés pour le matériau
         material.userData = {
-            originalOpacity: 0.3,
-            rippleIntensity: 0
+            originalOpacity: 0.3
         };
         
         this.wireframe = new THREE.LineSegments(geometry, material);
@@ -334,70 +327,7 @@ class ThreeJSRenderer {
         this.wireframe.geometry.attributes.position.needsUpdate = true;
     }
     
-    // Nouvelle méthode pour appliquer l'effet de ripple au wireframe 3D
-    applyRippleEffectToWireframe(centerX, centerY, radius, intensity) {
-        if (!this.wireframe || !this.wireframe.geometry || !this.originalPositions) return;
-        
-        const positions = this.wireframe.geometry.attributes.position.array;
-        const colors = this.wireframe.geometry.attributes.color.array;
-        
-        // Appliquer l'effet de ripple UNIQUEMENT dans le rayon spécifié
-        for (let i = 0; i < positions.length; i += 3) {
-            const x = positions[i];
-            const y = positions[i + 1];
-            const z = positions[i + 2];
-            
-            // Calculer la distance exacte du centre du ripple
-            const distance = Math.sqrt((x - centerX) ** 2 + (y - centerY) ** 2);
-            
-            if (distance <= radius) {
-                // Calculer l'intensité de l'effet basée sur la distance (plus forte au centre)
-                const effectStrength = 1 - (distance / radius);
-                const waveEffect = Math.sin(effectStrength * Math.PI) * effectStrength;
-                
-                // Déformation subtile uniquement dans le rayon
-                const deformationX = Math.sin(x * 0.3 + Date.now() * 0.005) * waveEffect * intensity * 0.2;
-                const deformationY = Math.cos(y * 0.3 + Date.now() * 0.005) * waveEffect * intensity * 0.2;
-                const deformationZ = Math.sin((x + y) * 0.2) * waveEffect * intensity * 0.1;
-                
-                // Appliquer la déformation aux positions originales
-                positions[i] = this.originalPositions[i] + deformationX;
-                positions[i + 1] = this.originalPositions[i + 1] + deformationY;
-                positions[i + 2] = this.originalPositions[i + 2] + deformationZ;
-                
-                // Modifier les couleurs uniquement dans le rayon
-                const colorIndex = i / 3 * 3;
-                if (colors[colorIndex] !== undefined) {
-                    // Augmenter légèrement la luminosité et ajouter une teinte rouge
-                    colors[colorIndex] = Math.min(1, colors[colorIndex] + waveEffect * intensity * 0.3);
-                    colors[colorIndex + 1] = Math.max(0, colors[colorIndex + 1] - waveEffect * intensity * 0.2);
-                    colors[colorIndex + 2] = Math.max(0, colors[colorIndex + 2] - waveEffect * intensity * 0.2);
-                }
-            } else {
-                // IMPORTANT : Restaurer EXACTEMENT les positions et couleurs originales
-                positions[i] = this.originalPositions[i];
-                positions[i + 1] = this.originalPositions[i + 1];
-                positions[i + 2] = this.originalPositions[i + 2];
-                
-                // Restaurer les couleurs originales
-                const colorIndex = i / 3 * 3;
-                if (colors[colorIndex] !== undefined && this.originalColors[colorIndex] !== undefined) {
-                    colors[colorIndex] = this.originalColors[colorIndex];
-                    colors[colorIndex + 1] = this.originalColors[colorIndex + 1];
-                    colors[colorIndex + 2] = this.originalColors[colorIndex + 2];
-                }
-            }
-        }
-        
-        // Mettre à jour la géométrie
-        this.wireframe.geometry.attributes.position.needsUpdate = true;
-        this.wireframe.geometry.attributes.color.needsUpdate = true;
-        
-        // Modifier légèrement l'opacité du matériau pour l'effet de lueur
-        if (this.wireframe.material) {
-            this.wireframe.material.opacity = this.wireframe.material.userData.originalOpacity + intensity * 0.2;
-        }
-    }
+
     
     // Méthode pour restaurer le wireframe à son état original
     restoreWireframeOriginalState() {
@@ -454,7 +384,7 @@ class ThreeJSRenderer {
             // Afficher les instructions
             this.showWireframeInstructions();
             
-            console.log('◊ Mode Wireframe 3D activé - Cliquez pour créer des ripples !');
+            console.log('◊ Mode 3D activé');
         } else {
             // Restaurer le wireframe CSS
             const wallpaper = document.getElementById('wallpaper');
@@ -529,77 +459,12 @@ class ThreeJSRenderer {
             }
         });
         
-        // Gestion des clics pour l'effet de ripple sur le wireframe 3D
-        document.addEventListener('click', (e) => {
-            if (this.isWireframeInteractive && this.wireframe) {
-                this.handleWireframeClick(e);
-            }
-        });
+
     }
     
-    // Nouvelle méthode pour gérer les clics sur le wireframe 3D
-    handleWireframeClick(event) {
-        if (!this.wireframe || !this.camera || !this.renderer) return;
-        
-        // Convertir les coordonnées de la souris en coordonnées normalisées
-        const rect = this.renderer.domElement.getBoundingClientRect();
-        this.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-        this.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-        
-        // Lancer un rayon depuis la caméra
-        this.raycaster.setFromCamera(this.mouse, this.camera);
-        
-        // Vérifier l'intersection avec le wireframe
-        const intersects = this.raycaster.intersectObject(this.wireframe);
-        
-        if (intersects.length > 0) {
-            const intersection = intersects[0];
-            const worldPoint = intersection.point;
-            
-            console.log('🎯 Clic détecté sur le wireframe 3D à:', worldPoint);
-            
-            // Créer l'effet de ripple
-            this.createWireframeRipple(worldPoint.x, worldPoint.y, 5, 1.0);
-        }
-    }
+
     
-    // Méthode pour créer un effet de ripple sur le wireframe 3D
-    createWireframeRipple(centerX, centerY, radius, intensity) {
-        if (!this.wireframe) return;
-        
-        console.log('🌊 Création d\'un ripple sur le wireframe 3D à', centerX, centerY, 'rayon:', radius);
-        
-        // Appliquer l'effet immédiatement avec le rayon exact
-        this.applyRippleEffectToWireframe(centerX, centerY, radius, intensity);
-        
-        // Créer une animation de ripple qui s'étend progressivement
-        let currentRadius = radius * 0.5; // Commencer à la moitié du rayon
-        const maxRadius = radius * 2; // S'étendre jusqu'à 2x le rayon initial
-        const animationDuration = 800; // 800ms pour un effet plus rapide
-        const startTime = Date.now();
-        
-        const animateRipple = () => {
-            const elapsed = Date.now() - startTime;
-            const progress = elapsed / animationDuration;
-            
-            if (progress < 1) {
-                // Calculer le rayon actuel avec une fonction d'easing
-                currentRadius = radius + (maxRadius - radius) * this.easeOutQuart(progress);
-                
-                // Appliquer l'effet avec le rayon actuel et une intensité décroissante
-                const currentIntensity = intensity * (1 - progress * 0.7); // Garder un peu d'intensité
-                this.applyRippleEffectToWireframe(centerX, centerY, currentRadius, currentIntensity);
-                
-                requestAnimationFrame(animateRipple);
-            } else {
-                // Restaurer l'état original
-                this.restoreWireframeOriginalState();
-                console.log('✅ Ripple sur le wireframe 3D terminé');
-            }
-        };
-        
-        animateRipple();
-    }
+
     
     // Fonction d'easing pour une animation fluide
     easeOutQuart(t) {
@@ -731,8 +596,8 @@ class RetroOS {
         this.clockInterval = null;
         this.draggedWindow = null;
         this.dragOffset = { x: 0, y: 0 };
-        this.activeRipples = 0;
-        this.maxRipples = 6; // Limite le nombre de ripples simultanés
+        this.activeWaterDrops = 0;
+        this.maxWaterDrops = 6; // Limite le nombre d'effets water drop simultanés
         this.threeJSRenderer = null;
         
         this.init();
@@ -770,9 +635,9 @@ class RetroOS {
                     loadingScreen.classList.add('hidden');
                     
                     // Animation séquentielle des éléments
-                    // 1. Wireframe du background (CSS par défaut, pas 3D automatiquement)
+                    // 1. Wireframe du background (CSS par défaut)
                     setTimeout(() => {
-                        // Garder le wireframe CSS par défaut, l'utilisateur pourra basculer manuellement
+                        // Afficher le wireframe CSS par défaut
                         const wallpaper = document.getElementById('wallpaper');
                         if (wallpaper) {
                             wallpaper.style.opacity = '0.3';
@@ -782,7 +647,7 @@ class RetroOS {
                         const wireframeToggle = document.getElementById('wireframe-toggle');
                         if (wireframeToggle) {
                             wireframeToggle.classList.remove('active');
-                            wireframeToggle.querySelector('span').textContent = 'Wireframe CSS';
+                            wireframeToggle.querySelector('span').textContent = 'Mode 3D';
                         }
                     }, 100);
                     
@@ -1132,7 +997,7 @@ class RetroOS {
     initializeRetroOS() {
         this.setupEventListeners();
         this.setupCustomCursor();
-        this.setupRippleEffect();
+        this.setupWaterDropEffect();
         this.updateClock();
         this.startClock();
         this.positionWindows();
@@ -1163,7 +1028,7 @@ class RetroOS {
             }
             
             console.log('✅ Three.js intégré dans RetroOS');
-            console.log('ℹ️ Wireframe CSS activé par défaut - Utilisez le bouton pour basculer vers le mode 3D');
+            console.log('ℹ️ Wireframe CSS activé par défaut');
         } catch (error) {
             console.error('❌ Erreur lors de l\'intégration de Three.js:', error);
         }
@@ -1388,28 +1253,28 @@ class RetroOS {
                 // Mode 3D activé
                 if (wireframeToggle) {
                     wireframeToggle.classList.add('active');
-                    wireframeToggle.querySelector('span').textContent = 'Wireframe 3D';
+                    wireframeToggle.querySelector('span').textContent = 'Mode 3D Actif';
                 }
                 if (wallpaper) {
                     wallpaper.style.opacity = '0'; // Masquer le wireframe CSS
                 }
-                console.log('◊ Mode Wireframe 3D activé');
+                console.log('◊ Mode 3D activé');
             } else {
                 // Mode CSS activé
                 if (wireframeToggle) {
                     wireframeToggle.classList.remove('active');
-                    wireframeToggle.querySelector('span').textContent = 'Wireframe CSS';
+                    wireframeToggle.querySelector('span').textContent = 'Mode 3D';
                 }
                 if (wallpaper) {
                     wallpaper.style.opacity = '0.3'; // Afficher le wireframe CSS
                 }
-                console.log('◊ Mode Wireframe CSS activé');
+                console.log('◊ Mode CSS activé');
             }
         } else {
             // Three.js pas encore initialisé, basculer vers le mode CSS
             if (wireframeToggle) {
                 wireframeToggle.classList.remove('active');
-                wireframeToggle.querySelector('span').textContent = 'Wireframe CSS';
+                wireframeToggle.querySelector('span').textContent = 'Mode 3D';
             }
             if (wallpaper) {
                 wallpaper.style.opacity = '0.3';
@@ -1847,7 +1712,7 @@ class RetroOS {
         console.log('🧪 Test de la barre des tâches désactivé - Fenêtre du jeu masquée au démarrage');
     }
 
-    setupRippleEffect() {
+    setupWaterDropEffect() {
         // Utiliser un événement global sur le document pour capturer tous les clics
         document.addEventListener('click', (e) => {
             const wallpaper = document.getElementById('wallpaper');
@@ -1857,11 +1722,10 @@ class RetroOS {
                 return;
             }
             
-            console.log('🎯 Clic détecté sur:', e.target.tagName, e.target.className, e.target.id);
+            console.log('💧 Clic détecté - Création de l\'effet water drop sur le wireframe');
             
-            // Créer l'effet de ripple sur le wireframe pour TOUS les clics
-            console.log('🎯 Création du ripple sur le wireframe');
-            this.createRipple(e, wallpaper);
+            // Créer l'effet de water drop sur le wireframe pour TOUS les clics
+            this.createWaterDrop(e, wallpaper);
         });
         
         // Version alternative avec mousedown pour une meilleure détection
@@ -1870,442 +1734,88 @@ class RetroOS {
             
             if (!wallpaper) return;
             
-            console.log('🎯 Mousedown détecté - Création du ripple sur le wireframe');
+            console.log('💧 Mousedown détecté - Création de l\'effet water drop sur le wireframe');
             
-            // Créer l'effet de ripple uniquement sur le wireframe
-            this.createRipple(e, wallpaper);
+            // Créer l'effet de water drop uniquement sur le wireframe
+            this.createWaterDrop(e, wallpaper);
         });
         
-        console.log('✅ Effet de ripple configuré sur le wireframe - Tous les clics déclenchent l\'effet');
+        console.log('✅ Effet water drop configuré sur le wireframe CSS - Tous les clics déclenchent l\'effet');
     }
     
-    createRipple(event, target) {
-        console.log('🎨 Création du ripple...');
+    createWaterDrop(event, target) {
+        console.log('💧 Création de l\'effet water drop...');
         
-        // Vérifier si on peut créer de nouveaux ripples
-        if (this.activeRipples >= this.maxRipples) {
-            console.log('⚠️ Limite de ripples atteinte, attendez...');
+        // Vérifier si on peut créer de nouveaux effets
+        if (this.activeWaterDrops >= this.maxWaterDrops) {
+            console.log('⚠️ Limite d\'effets atteinte, attendez...');
             return;
         }
         
         try {
-            // Créer 1 à 2 ripples pour un effet plus subtil
-            const rippleCount = Math.min(
-                Math.floor(Math.random() * 2) + 1, // 1 à 2 ripples
-                this.maxRipples - this.activeRipples // Respecter la limite
-            );
+            // Créer un seul effet water drop pour un impact plus net
+            const waterDrop = document.createElement('div');
+            waterDrop.className = 'water-drop';
             
-            console.log(`🎨 Création de ${rippleCount} ripple(s)`);
+            // Créer l'élément de déformation du wireframe
+            const wireframeDistortion = document.createElement('div');
+            wireframeDistortion.className = 'wireframe-water-distortion';
             
-            for (let i = 0; i < rippleCount; i++) {
-                const ripple = document.createElement('div');
-                ripple.className = 'ripple';
-                
-                // Créer l'élément de déformation du wireframe
-                const wireframeDistortion = document.createElement('div');
-                wireframeDistortion.className = 'wireframe-distortion';
-                
-                // Calculer la position relative au wireframe
-                const rect = target.getBoundingClientRect();
-                // Réduire la taille des ripples pour un effet plus subtil
-                const size = Math.min(rect.width, rect.height) * 0.3; // 30% de la plus petite dimension
-                
-                // Ajouter une légère variation de position pour les ripples multiples
-                const offsetX = (Math.random() - 0.5) * 10; // Réduit de 20 à 10
-                const offsetY = (Math.random() - 0.5) * 10;
-                const x = event.clientX - rect.left + offsetX;
-                const y = event.clientY - rect.top + offsetY;
-                
-                console.log(`🎨 Ripple ${i + 1}: position (${Math.round(x)}, ${Math.round(y)}), taille: ${Math.round(size)}px`);
-                
-                // Positionner le ripple
-                ripple.style.left = x + 'px';
-                ripple.style.top = y + 'px';
-                ripple.style.width = size + 'px';
-                ripple.style.height = size + 'px';
-                ripple.style.marginLeft = -size / 2 + 'px';
-                ripple.style.marginTop = -size / 2 + 'px';
-                
-                // Positionner la déformation du wireframe (plus grande zone d'effet)
-                const distortionSize = size * 3;
-                wireframeDistortion.style.left = (x - distortionSize / 2) + 'px';
-                wireframeDistortion.style.top = (y - distortionSize / 2) + 'px';
-                wireframeDistortion.style.width = distortionSize + 'px';
-                wireframeDistortion.style.height = distortionSize + 'px';
-                
-                // Ajouter au wireframe
-                target.appendChild(wireframeDistortion);
-                target.appendChild(ripple);
-                this.activeRipples++;
-                
-                // Appliquer l'effet de déformation et de luminosité au wireframe 3D
-                this.applyWireframeRippleEffect(x, y, size, i * 50);
-                
-                console.log(`🎨 Ripple ${i + 1} ajouté, total actif: ${this.activeRipples}`);
-                
-                // Nettoyer après l'animation
-                setTimeout(() => {
-                    if (ripple.parentNode) {
-                        ripple.parentNode.removeChild(ripple);
-                    }
-                    if (wireframeDistortion.parentNode) {
-                        wireframeDistortion.parentNode.removeChild(wireframeDistortion);
-                    }
-                    this.activeRipples--;
-                    console.log(`🎨 Ripple ${i + 1} nettoyé, total actif: ${this.activeRipples}`);
-                }, 600 + (i * 50)); // Délai progressif réduit
-            }
-        } catch (error) {
-            console.error('❌ Erreur lors de la création du ripple:', error);
-        }
-    }
-    
-    applyWireframeRippleEffect(x, y, size, delay) {
-        // Vérifier si le renderer Three.js est disponible et actif
-        if (!this.threeJSRenderer || !this.threeJSRenderer.isInitialized || 
-            !this.threeJSRenderer.wireframe || !this.threeJSRenderer.wireframe.geometry) {
-            console.log('⚠️ Three.js non disponible pour l\'effet de ripple');
-            return;
-        }
-        
-        try {
-            // Convertir les coordonnées de l'écran en coordonnées du wireframe 3D
-            const rect = document.getElementById('wallpaper');
-            if (!rect) {
-                console.log('⚠️ Élément wallpaper non trouvé');
-                return;
-            }
+            // Calculer la position relative au wireframe
+            const rect = target.getBoundingClientRect();
+            const size = Math.min(rect.width, rect.height) * 0.4; // 40% de la plus petite dimension
             
-            const wallpaperRect = rect.getBoundingClientRect();
+            // Position exacte du clic
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
             
-            // Normaliser les coordonnées par rapport au centre de l'écran
-            const centerX = wallpaperRect.width / 2;
-            const centerY = wallpaperRect.height / 2;
+            console.log(`💧 Water drop: position (${Math.round(x)}, ${Math.round(y)}), taille: ${Math.round(size)}px`);
             
-            // Convertir en coordonnées relatives au centre (-1 à 1)
-            const normalizedX = (x - centerX) / centerX;
-            const normalizedY = (y - centerY) / centerY;
+            // Positionner l'effet water drop
+            waterDrop.style.left = x + 'px';
+            waterDrop.style.top = y + 'px';
+            waterDrop.style.width = size + 'px';
+            waterDrop.style.height = size + 'px';
+            waterDrop.style.marginLeft = -size / 2 + 'px';
+            waterDrop.style.marginTop = -size / 2 + 'px';
             
-            // Convertir en coordonnées du wireframe 3D (échelle 10x10)
-            const wireframeX = normalizedX * 10;
-            const wireframeY = -normalizedY * 10; // Inverser Y pour Three.js
+            // Positionner la déformation du wireframe (zone d'effet plus large)
+            const distortionSize = size * 4;
+            wireframeDistortion.style.left = (x - distortionSize / 2) + 'px';
+            wireframeDistortion.style.top = (y - distortionSize / 2) + 'px';
+            wireframeDistortion.style.width = distortionSize + 'px';
+            wireframeDistortion.style.height = distortionSize + 'px';
             
-            // Calculer le rayon de l'effet (plus grand pour être visible)
-            const effectRadius = Math.max(size / 50, 0.5); // Minimum 0.5 unités
+            // Ajouter au wireframe
+            target.appendChild(wireframeDistortion);
+            target.appendChild(waterDrop);
+            this.activeWaterDrops++;
             
-            console.log(`🌊 Application de l'effet ripple:`, {
-                screenPos: `(${x}, ${y})`,
-                normalized: `(${normalizedX.toFixed(2)}, ${normalizedY.toFixed(2)})`,
-                wireframePos: `(${wireframeX.toFixed(2)}, ${wireframeY.toFixed(2)})`,
-                radius: effectRadius.toFixed(2)
-            });
+            console.log(`💧 Water drop ajouté, total actif: ${this.activeWaterDrops}`);
             
-            // Appliquer l'effet avec un délai pour synchroniser avec l'animation CSS
+            // Nettoyer après l'animation
             setTimeout(() => {
-                this.createWireframeShockwave(wireframeX, wireframeY, effectRadius, delay);
-            }, delay);
-            
+                if (waterDrop.parentNode) {
+                    waterDrop.parentNode.removeChild(waterDrop);
+                }
+                if (wireframeDistortion.parentNode) {
+                    wireframeDistortion.parentNode.removeChild(wireframeDistortion);
+                }
+                this.activeWaterDrops--;
+                console.log(`💧 Water drop nettoyé, total actif: ${this.activeWaterDrops}`);
+            }, 1200); // Animation plus longue pour l'effet water drop
         } catch (error) {
-            console.error('❌ Erreur lors de l\'application de l\'effet ripple au wireframe:', error);
+            console.error('❌ Erreur lors de la création de l\'effet water drop:', error);
         }
     }
     
-    createWireframeShockwave(centerX, centerY, radius, delay) {
-        if (!this.threeJSRenderer || !this.threeJSRenderer.wireframe) return;
-        
-        const wireframe = this.threeJSRenderer.wireframe;
-        const geometry = wireframe.geometry;
-        const material = wireframe.material;
-        const positions = geometry.attributes.position.array;
-        const colors = geometry.attributes.color.array;
-        
-        // Créer une copie des positions originales si elle n'existe pas
-        if (!wireframe.userData.originalPositions) {
-            wireframe.userData.originalPositions = new Float32Array(positions);
-        }
-        
-        // Créer une copie des couleurs originales si elle n'existe pas
-        if (!wireframe.userData.originalColors) {
-            wireframe.userData.originalColors = new Float32Array(colors);
-        }
-        
-        // Créer une animation d'onde de choc progressive avec effet liquide
-        const startTime = Date.now();
-        const animationDuration = 1200; // 1.2s pour l'animation complète
-        
-        // Créer des particules d'effet visuel
-        this.createRippleParticles(centerX, centerY, radius);
-        
-        const animateShockwave = () => {
-            const elapsed = Date.now() - startTime;
-            const progress = Math.min(elapsed / animationDuration, 1);
-            
-            // Calculer le rayon actuel de l'onde de choc (expansion progressive)
-            const currentRadius = radius * 4 * progress;
-            
-            // Réinitialiser les positions et couleurs
-            for (let i = 0; i < positions.length; i += 3) {
-                positions[i] = wireframe.userData.originalPositions[i];
-                positions[i + 1] = wireframe.userData.originalPositions[i + 1];
-                positions[i + 2] = wireframe.userData.originalPositions[i + 2];
-                
-                const colorIndex = i / 3 * 3;
-                if (colors[colorIndex] !== undefined) {
-                    colors[colorIndex] = wireframe.userData.originalColors[colorIndex];
-                    colors[colorIndex + 1] = wireframe.userData.originalColors[colorIndex + 1];
-                    colors[colorIndex + 2] = wireframe.userData.originalColors[colorIndex + 2];
-                }
-            }
-            
-            // Appliquer l'effet d'onde de choc liquide
-            for (let i = 0; i < positions.length; i += 3) {
-                const x = wireframe.userData.originalPositions[i];
-                const y = wireframe.userData.originalPositions[i + 1];
-                const z = wireframe.userData.originalPositions[i + 2];
-                
-                // Calculer la distance du point au centre de l'onde de choc
-                const distance = Math.sqrt((x - centerX) ** 2 + (y - centerY) ** 2);
-                
-                if (distance <= currentRadius) {
-                    // Calculer l'intensité de l'effet (plus fort au centre, diminue avec la distance)
-                    const intensity = Math.max(0, 1 - distance / currentRadius);
-                    
-                    // Effet de déformation liquide avec plusieurs ondes superposées
-                    const waveSpeed = Date.now() * 0.015;
-                    const wave1 = Math.sin(distance * 8 - waveSpeed) * intensity * 0.8;
-                    const wave2 = Math.sin(distance * 12 - waveSpeed * 1.5) * intensity * 0.6;
-                    const wave3 = Math.cos(distance * 6 - waveSpeed * 0.8) * intensity * 0.4;
-                    
-                    // Combiner les ondes pour un effet liquide
-                    const totalWaveEffect = (wave1 + wave2 + wave3) / 3;
-                    
-                    // Déformation du wireframe (effet liquide prononcé)
-                    positions[i] = x + totalWaveEffect * 0.4; // Déformation X
-                    positions[i + 1] = y + totalWaveEffect * 0.4; // Déformation Y
-                    positions[i + 2] = z + totalWaveEffect * 0.2; // Déformation Z
-                    
-                    // Augmentation de la luminosité avec effet de pulsation liquide
-                    const colorIndex = i / 3 * 3;
-                    if (colors[colorIndex] !== undefined) {
-                        // Effet de luminosité pulsante plus prononcé
-                        const brightnessPulse = Math.sin(waveSpeed * 3) * 0.3;
-                        const brightnessMultiplier = 2.0 + brightnessPulse; // 1.7x à 2.3x
-                        
-                        // Appliquer l'augmentation de luminosité
-                        colors[colorIndex] = Math.min(1, wireframe.userData.originalColors[colorIndex] * brightnessMultiplier);
-                        colors[colorIndex + 1] = Math.min(1, wireframe.userData.originalColors[colorIndex + 1] * brightnessMultiplier);
-                        colors[colorIndex + 2] = Math.min(1, wireframe.userData.originalColors[colorIndex + 2] * brightnessMultiplier);
-                        
-                        // Ajouter un effet de couleur rougeâtre pour l'onde de choc
-                        if (intensity > 0.5) {
-                            colors[colorIndex] = Math.min(1, colors[colorIndex] + intensity * 0.3);
-                            colors[colorIndex + 1] = Math.max(0, colors[colorIndex + 1] - intensity * 0.2);
-                            colors[colorIndex + 2] = Math.max(0, colors[colorIndex + 2] - intensity * 0.2);
-                        }
-                    }
-                }
-            }
-            
-            // Mettre à jour la géométrie
-            geometry.attributes.position.needsUpdate = true;
-            geometry.attributes.color.needsUpdate = true;
-            
-            // Continuer l'animation si elle n'est pas terminée
-            if (progress < 1) {
-                requestAnimationFrame(animateShockwave);
-            } else {
-                // Animation terminée, restaurer l'état original progressivement
-                setTimeout(() => {
-                    this.restoreWireframeOriginalState();
-                }, 300);
-            }
-        };
-        
-        // Démarrer l'animation
-        animateShockwave();
-        
-        // Effet sur le matériau (opacité et intensité)
-        if (material.userData) {
-            material.userData.rippleIntensity = 1;
-            material.opacity = Math.min(1, material.userData.originalOpacity * 1.8);
-        }
-        
-        console.log(`🌊 Onde de choc créée à (${centerX.toFixed(2)}, ${centerY.toFixed(2)}) avec rayon ${radius.toFixed(2)}`);
-    }
+
     
-    createRippleParticles(centerX, centerY, radius) {
-        if (!this.threeJSRenderer || !this.threeJSRenderer.scene) return;
-        
-        try {
-            // Créer un groupe de particules pour l'effet visuel
-            const particleGroup = new THREE.Group();
-            particleGroup.name = 'ripple-particles';
-            
-            // Créer plusieurs particules
-            const particleCount = 8;
-            for (let i = 0; i < particleCount; i++) {
-                const particle = new THREE.Mesh(
-                    new THREE.SphereGeometry(0.05, 8, 6),
-                    new THREE.MeshBasicMaterial({
-                        color: 0xff4444,
-                        transparent: true,
-                        opacity: 0.8
-                    })
-                );
-                
-                // Positionner les particules en cercle autour du centre
-                const angle = (i / particleCount) * Math.PI * 2;
-                const distance = radius * (0.5 + Math.random() * 0.5);
-                particle.position.set(
-                    centerX + Math.cos(angle) * distance,
-                    centerY + Math.sin(angle) * distance,
-                    0.1
-                );
-                
-                // Animation de la particule
-                particle.userData = {
-                    originalPosition: particle.position.clone(),
-                    startTime: Date.now(),
-                    duration: 1000 + Math.random() * 500
-                };
-                
-                particleGroup.add(particle);
-            }
-            
-            // Ajouter le groupe à la scène
-            this.threeJSRenderer.scene.add(particleGroup);
-            
-            // Animer les particules
-            const animateParticles = () => {
-                let allFinished = true;
-                
-                particleGroup.children.forEach(particle => {
-                    const elapsed = Date.now() - particle.userData.startTime;
-                    const progress = Math.min(elapsed / particle.userData.duration, 1);
-                    
-                    if (progress < 1) {
-                        allFinished = false;
-                        
-                        // Expansion et fade-out
-                        const scale = 1 + progress * 3;
-                        particle.scale.setScalar(scale);
-                        particle.material.opacity = 0.8 * (1 - progress);
-                        
-                        // Mouvement vers l'extérieur
-                        const direction = particle.position.clone().sub(new THREE.Vector3(centerX, centerY, 0)).normalize();
-                        particle.position.copy(particle.userData.originalPosition).add(direction.multiplyScalar(progress * radius * 2));
-                    }
-                });
-                
-                if (!allFinished) {
-                    requestAnimationFrame(animateParticles);
-                } else {
-                    // Nettoyer les particules
-                    this.threeJSRenderer.scene.remove(particleGroup);
-                }
-            };
-            
-            animateParticles();
-            
-        } catch (error) {
-            console.error('❌ Erreur lors de la création des particules:', error);
-        }
-    }
+
     
-    restoreWireframeOriginalState() {
-        if (!this.threeJSRenderer || !this.threeJSRenderer.wireframe) return;
-        
-        const wireframe = this.threeJSRenderer.wireframe;
-        const geometry = wireframe.geometry;
-        const material = wireframe.material;
-        
-        // Créer une animation de restauration fluide avec effet de rebond
-        const startTime = Date.now();
-        const restoreDuration = 800; // 800ms pour la restauration
-        
-        const animateRestore = () => {
-            const elapsed = Date.now() - startTime;
-            const progress = Math.min(elapsed / restoreDuration, 1);
-            
-            // Fonction d'easing avec rebond
-            const easeOutBounce = (t) => {
-                if (t < 1 / 2.75) {
-                    return 7.5625 * t * t;
-                } else if (t < 2 / 2.75) {
-                    return 7.5625 * (t -= 1.5 / 2.75) * t + 0.75;
-                } else if (t < 2.5 / 2.75) {
-                    return 7.5625 * (t -= 2.25 / 2.75) * t + 0.9375;
-                } else {
-                    return 7.5625 * (t -= 2.625 / 2.75) * t + 0.984375;
-                }
-            };
-            
-            const easedProgress = easeOutBounce(progress);
-            
-            if (wireframe.userData.originalPositions && wireframe.userData.originalColors) {
-                const positions = geometry.attributes.position.array;
-                const colors = geometry.attributes.color.array;
-                
-                // Restaurer progressivement les positions avec effet de rebond
-                for (let i = 0; i < positions.length; i += 3) {
-                    const originalX = wireframe.userData.originalPositions[i];
-                    const originalY = wireframe.userData.originalPositions[i + 1];
-                    const originalZ = wireframe.userData.originalPositions[i + 2];
-                    
-                    const currentX = positions[i];
-                    const currentY = positions[i + 1];
-                    const currentZ = positions[i + 2];
-                    
-                    // Interpolation avec rebond
-                    positions[i] = currentX + (originalX - currentX) * easedProgress;
-                    positions[i + 1] = currentY + (originalY - currentY) * easedProgress;
-                    positions[i + 2] = currentZ + (originalZ - currentZ) * easedProgress;
-                    
-                    // Restaurer progressivement les couleurs
-                    const colorIndex = i / 3 * 3;
-                    if (colors[colorIndex] !== undefined) {
-                        const originalR = wireframe.userData.originalColors[colorIndex];
-                        const originalG = wireframe.userData.originalColors[colorIndex + 1];
-                        const originalB = wireframe.userData.originalColors[colorIndex + 2];
-                        
-                        const currentR = colors[colorIndex];
-                        const currentG = colors[colorIndex + 1];
-                        const currentB = colors[colorIndex + 2];
-                        
-                        colors[colorIndex] = currentR + (originalR - currentR) * easedProgress;
-                        colors[colorIndex + 1] = currentG + (originalG - currentG) * easedProgress;
-                        colors[colorIndex + 2] = currentB + (originalB - currentB) * easedProgress;
-                    }
-                }
-                
-                // Mettre à jour la géométrie
-                geometry.attributes.position.needsUpdate = true;
-                geometry.attributes.color.needsUpdate = true;
-            }
-            
-            // Restaurer progressivement les propriétés du matériau
-            if (material.userData) {
-                const originalOpacity = material.userData.originalOpacity;
-                const currentOpacity = material.opacity;
-                material.opacity = currentOpacity + (originalOpacity - currentOpacity) * easedProgress;
-            }
-            
-            // Continuer l'animation si elle n'est pas terminée
-            if (progress < 1) {
-                requestAnimationFrame(animateRestore);
-            } else {
-                // Animation terminée, finaliser la restauration
-                if (material.userData) {
-                    material.userData.rippleIntensity = 0;
-                    material.opacity = material.userData.originalOpacity;
-                }
-                console.log('🌊 Restauration du wireframe terminée');
-            }
-        };
-        
-        // Démarrer l'animation de restauration
-        animateRestore();
-    }
+
+    
+
 }
 
 // Classe FumoRenderer pour l'animation 3D
@@ -2730,3 +2240,4 @@ function showRetroMessage(message) {
         }
     }, 2000);
 }
+
