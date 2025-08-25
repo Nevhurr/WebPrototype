@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RetroOS - Système d'exploitation rétro</title>
     <link rel="stylesheet" href="styles.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
     <!-- Écran de chargement -->
@@ -16,8 +15,7 @@
     <!-- Curseur personnalisé -->
     <div class="custom-cursor" id="custom-cursor"></div>
     
-    <!-- Canvas Three.js pour le rendu 3D -->
-    <canvas id="threejs-canvas"></canvas>
+
     
     <!-- Fond d'écran -->
     <div id="wallpaper"></div>
@@ -30,31 +28,27 @@
         </div>
         
         <!-- Icônes du bureau -->
-        <div class="desktop-icon" data-app="game">
-            <div class="icon-image">
-                <img src="images/icons/gameicon.png" alt="Icône du jeu" class="game-icon-img">
-            </div>
+        <div class="desktop-icon game-icon" data-app="game">
+            <img src="images/icons/gameicon.png" alt="Icône du jeu" class="game-icon-img">
             <div class="icon-label">Jeu Rétro</div>
         </div>
         
-        <div class="desktop-icon" data-app="about">
-            <div class="icon-image">◊</div>
+        <div class="desktop-icon about-icon" data-app="about">
+            <div class="icon-image">ℹ️</div>
             <div class="icon-label">À propos</div>
         </div>
         
-        <div class="desktop-icon" data-app="download">
-            <div class="icon-image">▼</div>
+        <div class="desktop-icon download-icon" data-app="download">
+            <div class="icon-image">📥</div>
             <div class="icon-label">Télécharger</div>
         </div>
-        
-
     </div>
     
     <!-- Barre des tâches -->
     <div id="taskbar">
         <!-- Bouton de démarrage -->
         <div id="start-button" class="taskbar-item">
-            <div class="start-icon"></div>
+            <div class="start-icon">▶</div>
             <span>Démarrer</span>
         </div>
         
@@ -77,40 +71,25 @@
             <p>Système rétro années 2000</p>
         </div>
         
-        <div class="start-menu-apps">
+        <div class="start-menu-items">
             <div class="start-menu-item" data-app="game">
-                <div class="app-icon">
-                    <img src="images/icons/gameicon.png" alt="Icône du jeu" class="game-icon-img-small">
-                </div>
-                <div class="app-info">
-                    <div class="app-name">Jeu Rétro</div>
-                    <div class="app-desc">Jouer au jeu</div>
-                </div>
+                <div class="start-menu-item-icon">🎮</div>
+                <div class="start-menu-item-text">Jeu Rétro</div>
             </div>
             
             <div class="start-menu-item" data-app="about">
-                <div class="app-icon">◊</div>
-                <div class="app-info">
-                    <div class="app-name">À propos</div>
-                    <div class="app-desc">Informations système</div>
-                </div>
+                <div class="start-menu-item-icon">ℹ️</div>
+                <div class="start-menu-item-text">À propos</div>
             </div>
             
             <div class="start-menu-item" data-app="download">
-                <div class="app-icon">▼</div>
-                <div class="app-info">
-                    <div class="app-name">Télécharger</div>
-                    <div class="app-desc">Télécharger le jeu</div>
-                </div>
+                <div class="start-menu-item-icon">📥</div>
+                <div class="start-menu-item-text">Télécharger</div>
             </div>
             
-
-        </div>
-        
-        <div class="start-menu-footer">
             <div class="start-menu-item" id="shutdown">
-                <div class="app-icon">◼</div>
-                <div class="app-name">Arrêter</div>
+                <div class="start-menu-item-icon">◼</div>
+                <div class="start-menu-item-text">Arrêter</div>
             </div>
         </div>
     </div>
@@ -120,7 +99,7 @@
         <!-- Fenêtre du jeu -->
         <div id="game-window" class="window hidden" data-app="game">
             <div class="window-header">
-                <div class="window-title">◉ Mon Jeu Rétro 2000</div>
+                <div class="window-title">🎮 Mon Jeu Rétro 2000</div>
                 <div class="window-controls">
                     <div class="window-control minimize" data-action="minimize">─</div>
                     <div class="window-control maximize" data-action="maximize">□</div>
@@ -129,10 +108,6 @@
             </div>
             <div class="window-content">
                 <div class="game-content">
-                    <h1>Mon Jeu Rétro 2000</h1>
-                    <p><strong>Bêta disponible - Jouez maintenant !</strong></p>
-                    <p>Un jeu web rétro inspiré des années 2000, avec des graphismes pixelisés et une gameplay nostalgique.</p>
-                    
                     <div class="game-frame-container">
                         <iframe 
                             src="game/game.html" 
@@ -141,27 +116,20 @@
                             allowfullscreen>
                         </iframe>
                     </div>
-                    
-                    <div class="game-actions">
-                        <button class="play-button">◉ Jouer Maintenant</button>
-                        <button class="download-button">▼ Télécharger</button>
-                    </div>
-                    
-                    <h2>Fonctionnalités</h2>
-                    <ul>
-                        <li>◉ Gameplay rétro authentique</li>
-                        <li>◊ Contrôles simples</li>
-                        <li>◆ Effets visuels années 2000</li>
-                        <li>◼ Système de score</li>
-                    </ul>
                 </div>
             </div>
+            
+            <!-- Poignées de redimensionnement -->
+            <div class="resize-handle" data-handle="nw"></div>
+            <div class="resize-handle" data-handle="ne"></div>
+            <div class="resize-handle" data-handle="sw"></div>
+            <div class="resize-handle" data-handle="se"></div>
         </div>
         
         <!-- Fenêtre À propos -->
         <div id="about-window" class="window hidden" data-app="about">
             <div class="window-header">
-                <div class="window-title">◊ À propos de RetroOS</div>
+                <div class="window-title">ℹ️ À propos de RetroOS</div>
                 <div class="window-controls">
                     <div class="window-control minimize" data-action="minimize">─</div>
                     <div class="window-control maximize" data-action="maximize">□</div>
@@ -189,12 +157,18 @@
                     <p>1.0.0 - Bêta</p>
                 </div>
             </div>
+            
+            <!-- Poignées de redimensionnement -->
+            <div class="resize-handle" data-handle="nw"></div>
+            <div class="resize-handle" data-handle="ne"></div>
+            <div class="resize-handle" data-handle="sw"></div>
+            <div class="resize-handle" data-handle="se"></div>
         </div>
         
         <!-- Fenêtre Télécharger -->
         <div id="download-window" class="window hidden" data-app="download">
             <div class="window-header">
-                <div class="window-title">▼ Télécharger</div>
+                <div class="window-title">📥 Télécharger</div>
                 <div class="window-controls">
                     <div class="window-control minimize" data-action="minimize">─</div>
                     <div class="window-control maximize" data-action="maximize">□</div>
@@ -227,9 +201,13 @@
                     </div>
                 </div>
             </div>
+            
+            <!-- Poignées de redimensionnement -->
+            <div class="resize-handle" data-handle="nw"></div>
+            <div class="resize-handle" data-handle="ne"></div>
+            <div class="resize-handle" data-handle="sw"></div>
+            <div class="resize-handle" data-handle="se"></div>
         </div>
-        
-
     </div>
     
     <!-- Scripts -->

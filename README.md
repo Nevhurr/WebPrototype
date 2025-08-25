@@ -43,11 +43,6 @@ Un système d'exploitation rétro inspiré des années 2000, créé avec des tec
 - Versions web, PC et mobile
 - Interface de téléchargement intuitive
 
-### 📧 Contact
-- Formulaire de contact complet
-- Validation des champs
-- Envoi de messages
-
 ## ⌨️ Raccourcis clavier
 
 - **Échap** : Fermer le menu de démarrage
@@ -55,7 +50,6 @@ Un système d'exploitation rétro inspiré des années 2000, créé avec des tec
 - **Ctrl+1** : Ouvrir le jeu
 - **Ctrl+2** : Ouvrir À propos
 - **Ctrl+3** : Ouvrir Télécharger
-- **Ctrl+4** : Ouvrir Contact
 
 ## 🚀 Utilisation
 
@@ -91,6 +85,7 @@ Le système utilise des variables CSS pour faciliter la personnalisation :
 - **HTML5** : Structure sémantique
 - **CSS3** : Styles et animations
 - **JavaScript ES6+** : Logique et interactions
+- **Three.js** : Rendu 3D des fenêtres
 - **Variables CSS** : Thème personnalisable
 - **Flexbox/Grid** : Layouts modernes
 
@@ -98,17 +93,18 @@ Le système utilise des variables CSS pour faciliter la personnalisation :
 
 - **Navigateurs modernes** : Chrome, Firefox, Safari, Edge
 - **Support mobile** : iOS Safari, Chrome Mobile
-- **Fonctionnalités** : ES6, CSS Grid, Flexbox
+- **Fonctionnalités** : ES6, CSS Grid, Flexbox, WebGL
 
 ## 📁 Structure du projet
 
 ```
-testweb/
+WebPrototype/
 ├── index.html          # Interface principale RetroOS
 ├── styles.css          # Styles et thème
 ├── script.js           # Logique du système
 ├── game/               # Dossier du jeu Godot
 ├── images/             # Images et ressources
+│   └── icons/         # Icônes du système
 └── guides/             # Documentation
 ```
 

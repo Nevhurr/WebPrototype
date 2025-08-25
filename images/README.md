@@ -1,14 +1,16 @@
 # 📸 Dossier Images
 
-Ce dossier contient les images utilisées dans le blog rétro.
+Ce dossier contient les images utilisées dans RetroOS.
 
 ## 🖼️ Images Actuelles
 
-- `retro-computer.jpg` - Image d'ordinateur rétro (référencée dans index.html)
+- `00107-1051047528.png` - Image centrale du bureau (personnage gothique pixel art)
+- `gameicon.png` - Icône du jeu dans le bureau et le menu de démarrage
+- `gameiconHD.png` - Icône haute résolution pour l'écran de chargement
 
 ## 📋 Comment Ajouter des Images
 
-1. **Formats supportés** : JPG, PNG, GIF (pour l'authenticité rétro !)
+1. **Formats supportés** : JPG, PNG, GIF
 2. **Taille recommandée** : 
    - Images d'articles : 600x400px maximum
    - Images de fond : 1920x1080px maximum
