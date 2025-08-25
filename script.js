@@ -750,6 +750,7 @@ class RetroOS {
         const startMenu = document.getElementById('start-menu');
         const windowsContainer = document.getElementById('windows-container');
         
+<<<<<<< HEAD
         // Masquer toutes les fenêtres au démarrage
         const allWindows = document.querySelectorAll('.window');
         allWindows.forEach(window => {
@@ -944,6 +945,188 @@ class RetroOS {
             }, 1000);
             
         }, 500);
+=======
+        console.log('🚀 Chargement de Three.js et du modèle FUMO...');
+        
+        // Charger Three.js et le modèle FUMO pendant l'écran de chargement
+        this.loadThreeJSAndFumo(() => {
+            // Callback appelé quand tout est chargé
+            console.log('✅ Tout est chargé, affichage du bureau...');
+            
+            // Faire disparaître l'écran de chargement
+            loadingScreen.classList.add('fade-out');
+            
+            setTimeout(() => {
+                loadingScreen.classList.add('hidden');
+                
+                // Animation séquentielle des éléments
+                // 1. Wireframe du background
+                setTimeout(() => {
+                    wallpaper.classList.add('fade-in');
+                }, 100);
+                
+                // 2. Reste des éléments RetroOS
+                setTimeout(() => {
+                    desktop.classList.add('fade-in');
+                }, 300);
+                
+                setTimeout(() => {
+                    taskbar.classList.add('fade-in');
+                }, 500);
+                
+                setTimeout(() => {
+                    startMenu.classList.add('fade-in');
+                }, 700);
+                
+                setTimeout(() => {
+                    windowsContainer.classList.add('fade-in');
+                }, 900);
+                
+                // Initialiser RetroOS après les animations
+                setTimeout(() => {
+                    this.initializeRetroOS();
+                }, 1000);
+                
+            }, 500); // Délai pour la transition de l'écran de chargement
+        });
+    }
+    
+    loadThreeJSAndFumo(callback) {
+        console.log('🔄 Vérification de Three.js...');
+        
+        // Vérifier d'abord si les scripts sont dans le DOM
+        const threeScript = document.querySelector('script[src*="three"]');
+        const gltfScript = document.querySelector('script[src*="GLTFLoader"]');
+        
+        console.log('🔍 Script Three.js trouvé:', !!threeScript);
+        console.log('🔍 Script GLTFLoader trouvé:', !!gltfScript);
+        
+        if (threeScript) {
+            console.log('📁 URL Three.js:', threeScript.src);
+        }
+        if (gltfScript) {
+            console.log('📁 URL GLTFLoader:', gltfScript.src);
+        }
+        
+        // Essayer de charger Three.js manuellement si nécessaire
+        if (typeof THREE === 'undefined') {
+            console.log('⚠️ THREE non défini, tentative de chargement manuel...');
+            this.loadThreeJSManually(callback);
+            return;
+        }
+        
+        // Vérifier GLTFLoader
+        if (typeof THREE.GLTFLoader === 'undefined') {
+            console.log('⚠️ GLTFLoader non défini, tentative de chargement manuel...');
+            this.loadGLTFLoaderManually(callback);
+            return;
+        }
+        
+        console.log('✅ Three.js et GLTFLoader disponibles');
+        this.preloadFumoModel(callback);
+    }
+    
+    loadThreeJSManually(callback) {
+        console.log('📥 Chargement manuel de Three.js...');
+        
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r158/three.min.js';
+        script.onload = () => {
+            console.log('✅ Three.js chargé manuellement');
+            this.loadGLTFLoaderManually(callback);
+        };
+        script.onerror = () => {
+            console.error('❌ Échec du chargement manuel de Three.js');
+            setTimeout(callback, 1000);
+        };
+        document.head.appendChild(script);
+    }
+    
+    loadGLTFLoaderManually(callback) {
+        if (typeof THREE === 'undefined') {
+            console.log('⏳ Attente de Three.js...');
+            setTimeout(() => this.loadGLTFLoaderManually(callback), 100);
+            return;
+        }
+        
+        console.log('📥 Chargement manuel de GLTFLoader...');
+        
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/three@0.158.0/examples/js/loaders/GLTFLoader.js';
+        script.onload = () => {
+            console.log('✅ GLTFLoader chargé manuellement');
+            this.preloadFumoModel(callback);
+        };
+        script.onerror = () => {
+            console.error('❌ Échec du chargement manuel de GLTFLoader');
+            setTimeout(callback, 1000);
+        };
+        document.head.appendChild(script);
+    }
+    
+    preloadFumoModel(callback) {
+        console.log('📥 Préchargement du modèle FUMO...');
+        
+        const loader = new THREE.GLTFLoader();
+        loader.load(
+            '3D/project_koishi_komeiji_fumo/scene.gltf',
+            (gltf) => {
+                console.log('✅ Modèle FUMO préchargé avec succès');
+                console.log('📊 Données du modèle:', gltf);
+                
+                // Stocker le modèle préchargé
+                window.preloadedFumoModel = gltf;
+                
+                // Mettre à jour l'écran de chargement
+                this.updateLoadingProgress(100);
+                
+                // Appeler le callback après un délai
+                setTimeout(callback, 1000);
+            },
+            (progress) => {
+                const percent = (progress.loaded / progress.total * 100).toFixed(2);
+                console.log('📥 Préchargement FUMO:', percent + '%');
+                
+                // Mettre à jour l'écran de chargement
+                this.updateLoadingProgress(percent);
+            },
+            (error) => {
+                console.error('❌ Erreur lors du préchargement FUMO:', error);
+                console.log('⚠️ Continuera avec le cube de fallback');
+                
+                // Continuer même en cas d'erreur
+                setTimeout(callback, 1000);
+            }
+        );
+    }
+    
+    updateLoadingProgress(percent) {
+        const loadingScreen = document.getElementById('loading-screen');
+        if (loadingScreen) {
+            // Créer ou mettre à jour la barre de progression
+            let progressBar = loadingScreen.querySelector('.loading-progress');
+            if (!progressBar) {
+                progressBar = document.createElement('div');
+                progressBar.className = 'loading-progress';
+                progressBar.innerHTML = `
+                    <div class="progress-text">Chargement: ${percent}%</div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: ${percent}%"></div>
+                    </div>
+                    <div class="loading-status">Chargement de Three.js et du modèle FUMO...</div>
+                `;
+                loadingScreen.appendChild(progressBar);
+            } else {
+                progressBar.innerHTML = `
+                    <div class="progress-text">Chargement: ${percent}%</div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: ${percent}%"></div>
+                    </div>
+                    <div class="loading-status">Chargement de Three.js et du modèle FUMO...</div>
+                `;
+            }
+        }
+>>>>>>> parent of b77894a (lil fix)
     }
     
     initializeRetroOS() {
@@ -1175,6 +1358,10 @@ class RetroOS {
                         e.preventDefault();
                         this.openWindow('download');
                         break;
+                    case '4':
+                        e.preventDefault();
+                        this.openWindow('fumo');
+                        break;
 
                 }
             }
@@ -1276,6 +1463,11 @@ class RetroOS {
             
             // Ajouter à la barre des tâches
             this.addToTaskbar(appName);
+            
+            // Déclencher l'événement d'ouverture pour FUMO
+            if (appName === 'fumo') {
+                document.dispatchEvent(new Event('fumo-window-opened'));
+            }
             
             console.log(`📱 Fenêtre ${appName} ouverte`);
         }
@@ -1537,7 +1729,8 @@ class RetroOS {
         const names = {
             game: '🎮 Jeu Rétro',
             about: 'ℹ️ À propos',
-            download: '📥 Télécharger'
+            download: '📥 Télécharger',
+            fumo: '🎭 FUMO'
         };
         return names[appName] || appName;
     }
@@ -2115,6 +2308,306 @@ class RetroOS {
     }
 }
 
+// Classe FumoRenderer pour l'animation 3D
+class FumoRenderer {
+    constructor(canvasId) {
+        this.canvas = document.getElementById(canvasId);
+        this.scene = null;
+        this.camera = null;
+        this.renderer = null;
+        this.fumoModel = null;
+        this.animationId = null;
+        this.isPaused = false;
+        this.isInitialized = false;
+        
+        // Three.js est déjà vérifié avant la création de cette classe
+        this.init();
+    }
+    
+    init() {
+        try {
+            // Vérifier que Three.js est disponible
+            if (typeof THREE === 'undefined') {
+                throw new Error('Three.js n\'est pas encore chargé');
+            }
+            
+            console.log('🚀 Initialisation de FumoRenderer...');
+            console.log('🔍 Version Three.js:', THREE.REVISION);
+            
+            this.setupScene();
+            this.setupCamera();
+            this.setupRenderer();
+            this.setupLights();
+            this.loadFumoModel();
+            this.animate();
+            this.isInitialized = true;
+            console.log('✅ FumoRenderer initialisé avec succès');
+        } catch (error) {
+            console.error('❌ Erreur lors de l\'initialisation de FumoRenderer:', error);
+            console.error('❌ Stack trace:', error.stack);
+        }
+    }
+    
+    setupScene() {
+        this.scene = new THREE.Scene();
+        this.scene.background = new THREE.Color(0x0a0a0a);
+    }
+    
+    setupCamera() {
+        this.camera = new THREE.PerspectiveCamera(
+            75,
+            this.canvas.clientWidth / this.canvas.clientHeight,
+            0.1,
+            1000
+        );
+        this.camera.position.set(0, 0, 5);
+    }
+    
+    setupRenderer() {
+        this.renderer = new THREE.WebGLRenderer({
+            canvas: this.canvas,
+            antialias: true,
+            alpha: true
+        });
+        this.renderer.setSize(this.canvas.clientWidth, this.canvas.clientHeight);
+        this.renderer.setPixelRatio(window.devicePixelRatio);
+        this.renderer.shadowMap.enabled = true;
+        this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    }
+    
+    setupLights() {
+        // Lumière ambiante
+        const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
+        this.scene.add(ambientLight);
+        
+        // Lumière directionnelle principale
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        directionalLight.position.set(1, 1, 1);
+        directionalLight.castShadow = true;
+        this.scene.add(directionalLight);
+        
+        // Lumière d'accent
+        const pointLight = new THREE.PointLight(0xff4444, 0.5, 10);
+        pointLight.position.set(0, 2, 2);
+        this.scene.add(pointLight);
+    }
+    
+    loadFumoModel() {
+        // Vérifier si le modèle a été préchargé
+        if (window.preloadedFumoModel) {
+            console.log('✅ Utilisation du modèle préchargé');
+            this.usePreloadedModel();
+        } else {
+            console.log('⚠️ Modèle non préchargé, création du cube temporaire');
+            this.createFallbackCube();
+        }
+    }
+    
+    createFallbackCube() {
+        // Créer un cube temporaire en attendant le modèle
+        const geometry = new THREE.BoxGeometry(1, 1, 1);
+        const material = new THREE.MeshLambertMaterial({
+            color: 0xff4444,
+            transparent: true,
+            opacity: 0.8
+        });
+        
+        this.fumoModel = new THREE.Mesh(geometry, material);
+        this.fumoModel.castShadow = true;
+        this.fumoModel.receiveShadow = true;
+        
+        // Position initiale (haut de l'écran)
+        this.fumoModel.position.set(0, 8, 0);
+        
+        this.scene.add(this.fumoModel);
+        
+        console.log('🎲 Cube temporaire créé');
+    }
+    
+    usePreloadedModel() {
+        const gltf = window.preloadedFumoModel;
+        
+        if (this.fumoModel) {
+            this.scene.remove(this.fumoModel);
+        }
+        
+        this.fumoModel = gltf.scene.clone();
+        
+        // Ajuster l'échelle et la position selon les dimensions du modèle
+        const modelHeight = 25;
+        const targetHeight = 3;
+        const scale = targetHeight / modelHeight;
+        
+        this.fumoModel.scale.set(scale, scale, scale);
+        this.fumoModel.position.set(0, 8, 0);
+        
+        // Configurer les ombres et matériaux pour tous les meshes
+        this.fumoModel.traverse((child) => {
+            if (child.isMesh) {
+                child.castShadow = true;
+                child.receiveShadow = true;
+                
+                if (child.material) {
+                    child.material.side = THREE.DoubleSide;
+                    child.material.transparent = true;
+                    child.material.opacity = 0.9;
+                }
+            }
+        });
+        
+        this.scene.add(this.fumoModel);
+        console.log('✅ Modèle préchargé utilisé avec succès');
+    }
+    
+    loadGLTFModel() {
+        console.log('🔄 Début du chargement GLTF...');
+        
+        // Vérifier que THREE.GLTFLoader existe
+        if (typeof THREE.GLTFLoader === 'undefined') {
+            console.error('❌ THREE.GLTFLoader non disponible');
+            console.log('🔍 THREE.js version:', THREE.REVISION);
+            console.log('🔍 Objets disponibles:', Object.keys(THREE));
+            return;
+        }
+        
+        const loader = new THREE.GLTFLoader();
+        console.log('✅ GLTFLoader créé avec succès');
+        
+        const modelPath = '3D/project_koishi_komeiji_fumo/scene.gltf';
+        console.log('📁 Chemin du modèle:', modelPath);
+        
+        loader.load(
+            modelPath,
+            (gltf) => {
+                console.log('🎉 Modèle GLTF chargé avec succès!');
+                console.log('📊 Données du modèle:', gltf);
+                console.log('🏗️ Scène:', gltf.scene);
+                console.log('🔧 Animations:', gltf.animations);
+                
+                if (this.fumoModel) {
+                    this.scene.remove(this.fumoModel);
+                    console.log('🗑️ Ancien modèle supprimé');
+                }
+                
+                this.fumoModel = gltf.scene;
+                
+                // Ajuster l'échelle et la position selon les dimensions du modèle
+                // Le modèle a une hauteur d'environ 25 unités (179.97 - 155.10)
+                const modelHeight = 25;
+                const targetHeight = 3; // Hauteur cible dans la scène
+                const scale = targetHeight / modelHeight;
+                
+                this.fumoModel.scale.set(scale, scale, scale);
+                this.fumoModel.position.set(0, 8, 0);
+                
+                // Centrer le modèle horizontalement
+                this.fumoModel.position.x = 0;
+                this.fumoModel.position.z = 0;
+                
+                console.log('📏 Dimensions du modèle:', modelHeight, 'unités');
+                console.log('🔧 Échelle appliquée:', scale);
+                console.log('📍 Position finale:', this.fumoModel.position);
+                
+                // Configurer les ombres et matériaux pour tous les meshes
+                this.fumoModel.traverse((child) => {
+                    console.log('🔍 Traversement enfant:', child.type, child.name);
+                    if (child.isMesh) {
+                        child.castShadow = true;
+                        child.receiveShadow = true;
+                        console.log('✅ Mesh configuré:', child.name);
+                        
+                        // Améliorer le rendu des matériaux
+                        if (child.material) {
+                            child.material.side = THREE.DoubleSide;
+                            child.material.transparent = true;
+                            child.material.opacity = 0.9;
+                            console.log('✅ Matériau configuré pour:', child.name);
+                        }
+                    }
+                });
+                
+                this.scene.add(this.fumoModel);
+                console.log('✅ Modèle FUMO ajouté à la scène');
+                console.log('🎯 Nombre d\'objets dans la scène:', this.scene.children.length);
+            },
+            (progress) => {
+                const percent = (progress.loaded / progress.total * 100).toFixed(2);
+                console.log('📥 Chargement du modèle:', percent + '%');
+                console.log('📊 Progression:', progress.loaded, '/', progress.total, 'bytes');
+            },
+            (error) => {
+                console.error('❌ Erreur lors du chargement du modèle:', error);
+                console.error('❌ Détails de l\'erreur:', error.message);
+                console.error('❌ Stack trace:', error.stack);
+                console.log('⚠️ Utilisation du cube de fallback');
+            }
+        );
+    }
+    
+    animate() {
+        if (this.isPaused) {
+            this.animationId = requestAnimationFrame(() => this.animate());
+            return;
+        }
+        
+        if (this.fumoModel) {
+            // Rotation continue plus douce
+            this.fumoModel.rotation.y += 0.015;
+            this.fumoModel.rotation.x += 0.008;
+            
+            // Chute lente et fluide
+            this.fumoModel.position.y -= 0.025;
+            
+            // Ajouter un léger balancement horizontal
+            this.fumoModel.position.x = Math.sin(Date.now() * 0.001) * 0.5;
+            
+            // Vérifier si le modèle est sorti de l'écran
+            if (this.fumoModel.position.y < -8) {
+                // Remettre en haut avec une position aléatoire
+                this.fumoModel.position.y = 8;
+                this.fumoModel.position.x = (Math.random() - 0.5) * 2;
+                this.fumoModel.rotation.z = (Math.random() - 0.5) * 0.2;
+            }
+        }
+        
+        this.renderer.render(this.scene, this.camera);
+        this.animationId = requestAnimationFrame(() => this.animate());
+    }
+    
+    pause() {
+        this.isPaused = true;
+    }
+    
+    resume() {
+        this.isPaused = false;
+        this.animate();
+    }
+    
+    restart() {
+        if (this.fumoModel) {
+            this.fumoModel.position.set(0, 8, 0);
+            this.fumoModel.rotation.set(0, 0, 0);
+        }
+    }
+    
+    resize() {
+        if (this.camera && this.renderer) {
+            this.camera.aspect = this.canvas.clientWidth / this.canvas.clientHeight;
+            this.camera.updateProjectionMatrix();
+            this.renderer.setSize(this.canvas.clientWidth, this.canvas.clientHeight);
+        }
+    }
+    
+    dispose() {
+        if (this.animationId) {
+            cancelAnimationFrame(this.animationId);
+        }
+        if (this.renderer) {
+            this.renderer.dispose();
+        }
+    }
+}
+
 // Initialisation au chargement de la page
 document.addEventListener('DOMContentLoaded', () => {
     window.retroOS = new RetroOS();
@@ -2140,14 +2633,71 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-
-    
     // Boutons de téléchargement
     const downloadBtns = document.querySelectorAll('.download-btn');
     downloadBtns.forEach(btn => {
         btn.addEventListener('click', function() {
             showRetroMessage('📥 Téléchargement en cours...');
         });
+    });
+    
+    // Gestion de l'application FUMO
+    let fumoRenderer = null;
+    
+    // Initialiser FumoRenderer quand la fenêtre FUMO est ouverte
+    document.addEventListener('fumo-window-opened', function() {
+        if (!fumoRenderer) {
+            console.log('🎭 Fenêtre FUMO ouverte, création du renderer...');
+            // Attendre que Three.js soit complètement chargé
+            if (typeof THREE !== 'undefined' && typeof THREE.GLTFLoader !== 'undefined') {
+                fumoRenderer = new FumoRenderer('fumo-canvas');
+            } else {
+                console.log('⏳ Three.js pas encore prêt, attente...');
+                const checkThreeJS = setInterval(() => {
+                    if (typeof THREE !== 'undefined' && typeof THREE.GLTFLoader !== 'undefined') {
+                        clearInterval(checkThreeJS);
+                        console.log('✅ Three.js prêt, création du renderer...');
+                        fumoRenderer = new FumoRenderer('fumo-canvas');
+                    }
+                }, 100);
+            }
+        }
+    });
+    
+    // Gestion des boutons FUMO
+    const restartFumoBtn = document.getElementById('restart-fumo');
+    const pauseFumoBtn = document.getElementById('pause-fumo');
+    
+    if (restartFumoBtn) {
+        restartFumoBtn.addEventListener('click', function() {
+            if (fumoRenderer) {
+                fumoRenderer.restart();
+                showRetroMessage('🔄 Animation redémarrée');
+            }
+        });
+    }
+    
+    if (pauseFumoBtn) {
+        pauseFumoBtn.addEventListener('click', function() {
+            if (fumoRenderer) {
+                if (fumoRenderer.isPaused) {
+                    fumoRenderer.resume();
+                    pauseFumoBtn.textContent = '⏸️ Pause';
+                    showRetroMessage('▶️ Animation reprise');
+                } else {
+                    fumoRenderer.pause();
+                    pauseFumoBtn.textContent = '▶️ Reprendre';
+                    showRetroMessage('⏸️ Animation en pause');
+                }
+            }
+        });
+    }
+    
+    // Redimensionner le canvas FUMO quand la fenêtre est redimensionnée
+    window.addEventListener('resize', function() {
+        if (fumoRenderer) {
+            fumoRenderer.resize();
+        }
     });
 });
 

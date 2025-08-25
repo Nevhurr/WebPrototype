@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RetroOS - Système d'exploitation rétro</title>
     <link rel="stylesheet" href="styles.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r158/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/examples/js/loaders/GLTFLoader.js"></script>
 </head>
 <body>
     <!-- Écran de chargement -->
@@ -53,6 +54,11 @@
         <div class="desktop-icon" data-app="download">
             <div class="icon-image">▼</div>
             <div class="icon-label">Télécharger</div>
+        </div>
+        
+        <div class="desktop-icon" data-app="fumo">
+            <div class="icon-image">🎭</div>
+            <div class="icon-label">FUMO</div>
         </div>
         
 
@@ -115,6 +121,14 @@
                 <div class="app-info">
                     <div class="app-name">Télécharger</div>
                     <div class="app-desc">Télécharger le jeu</div>
+                </div>
+            </div>
+            
+            <div class="start-menu-item" data-app="fumo">
+                <div class="app-icon">🎭</div>
+                <div class="app-info">
+                    <div class="app-name">FUMO</div>
+                    <div class="app-desc">Animation 3D Fumo</div>
                 </div>
             </div>
             
@@ -238,6 +252,29 @@
                             <p>Application mobile Android/iOS</p>
                             <button class="download-btn">Télécharger APK</button>
                         </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Fenêtre FUMO -->
+        <div id="fumo-window" class="window hidden" data-app="fumo">
+            <div class="window-header">
+                <div class="window-title">🎭 FUMO - Animation 3D</div>
+                <div class="window-controls">
+                    <div class="window-control minimize" data-action="minimize">─</div>
+                    <div class="window-control maximize" data-action="maximize">□</div>
+                    <div class="window-control close" data-action="close">×</div>
+                </div>
+            </div>
+            <div class="window-content">
+                <div class="fumo-content">
+                    <div id="fumo-canvas-container">
+                        <canvas id="fumo-canvas"></canvas>
+                    </div>
+                    <div class="fumo-controls">
+                        <button id="restart-fumo" class="fumo-btn">🔄 Redémarrer</button>
+                        <button id="pause-fumo" class="fumo-btn">⏸️ Pause</button>
                     </div>
                 </div>
             </div>
