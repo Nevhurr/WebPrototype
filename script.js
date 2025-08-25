@@ -992,6 +992,162 @@ class RetroOS {
             console.error('❌ Erreur lors de la création du ripple:', error);
         }
     }
+    
+    addToTaskbar(appName) {
+        const runningApps = document.getElementById('running-apps');
+        const existingApp = runningApps.querySelector(`[data-app="${appName}"]`);
+        
+        if (!existingApp) {
+            const appElement = document.createElement('div');
+            appElement.className = 'running-app';
+            appElement.dataset.app = appName;
+            appElement.textContent = this.getAppDisplayName(appName);
+            
+            // Stocker la référence du gestionnaire d'événement
+            appElement._clickHandler = () => {
+                console.log(`🖱️ Clic sur l'app ${appName} dans la barre des tâches`);
+                this.restoreWindow(appName);
+            };
+            appElement.addEventListener('click', appElement._clickHandler);
+            
+            // Ajouter des styles de débogage
+            appElement.style.position = 'relative';
+            appElement.style.zIndex = '1002';
+            
+            runningApps.appendChild(appElement);
+            console.log(`✅ App ${appName} ajoutée à la barre des tâches`);
+        } else {
+            // Mettre à jour l'événement de clic pour les applications existantes
+            if (existingApp._clickHandler) {
+                existingApp.removeEventListener('click', existingApp._clickHandler);
+            }
+            existingApp._clickHandler = () => {
+                console.log(`🖱️ Clic sur l'app ${appName} existante dans la barre des tâches`);
+                this.restoreWindow(appName);
+            };
+            existingApp.addEventListener('click', existingApp._clickHandler);
+            console.log(`✅ App ${appName} mise à jour dans la barre des tâches`);
+        }
+    }
+    
+    removeFromTaskbar(appName) {
+        const runningApps = document.getElementById('running-apps');
+        const appElement = runningApps.querySelector(`[data-app="${appName}"]`);
+        if (appElement) {
+            appElement.remove();
+        }
+    }
+    
+    updateTaskbarFocus(appName) {
+        // Retirer le focus de toutes les applications
+        document.querySelectorAll('.running-app').forEach(app => {
+            app.classList.remove('active');
+        });
+        
+        // Mettre le focus sur l'application active
+        const activeApp = document.querySelector(`.running-app[data-app="${appName}"]`);
+        if (activeApp) {
+            appElement.classList.add('active');
+        }
+    }
+    
+    getAppDisplayName(appName) {
+        const names = {
+            game: '🎮 Jeu Rétro',
+            about: 'ℹ️ À propos',
+            download: '📥 Télécharger'
+        };
+        return names[appName] || appName;
+    }
+    
+    cycleWindows() {
+        const windowNames = Array.from(this.windows.keys());
+        if (windowNames.length > 1) {
+            const currentIndex = windowNames.indexOf(this.activeWindow);
+            const nextIndex = (currentIndex + 1) % windowNames.length;
+            this.focusWindow(windowNames[nextIndex]);
+        }
+    }
+    
+    getNextZIndex() {
+        let maxZ = 100;
+        this.windows.forEach(windowData => {
+            if (windowData.zIndex > maxZ) {
+                maxZ = windowData.zIndex;
+            }
+        });
+        return maxZ + 1;
+    }
+    
+    updateClock() {
+        const now = new Date();
+        const timeString = now.toLocaleTimeString('fr-FR', { 
+            hour: '2-digit', 
+            minute: '2-digit' 
+        });
+        const dateString = now.toLocaleDateString('fr-FR', { 
+            day: '2-digit', 
+            month: '2-digit', 
+            year: 'numeric' 
+        });
+        
+        const clockElement = document.getElementById('clock');
+        const dateElement = document.getElementById('date');
+        
+        if (clockElement) clockElement.textContent = timeString;
+        if (dateElement) dateElement.textContent = dateString;
+    }
+    
+    startClock() {
+        this.clockInterval = setInterval(() => {
+            this.updateClock();
+        }, 1000);
+    }
+    
+    shutdown() {
+        if (confirm('Voulez-vous vraiment arrêter RetroOS ?')) {
+            // Fermer toutes les fenêtres
+            this.windows.forEach((windowData, appName) => {
+                this.closeWindow(appName);
+            });
+            
+            // Afficher un message de fermeture
+            const shutdownMessage = document.createElement('div');
+            shutdownMessage.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: var(--bg-dark);
+                color: var(--primary-color);
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                z-index: 9999;
+                font-family: 'Courier New', monospace;
+                font-size: 24px;
+            `;
+            shutdownMessage.innerHTML = `
+                <div>🔄 Arrêt de RetroOS...</div>
+                <div style="margin-top: 20px; font-size: 16px; color: var(--text-secondary);">
+                    Merci d'avoir utilisé notre système rétro !
+                </div>
+            `;
+            
+            document.body.appendChild(shutdownMessage);
+            
+            // Simuler un arrêt après 3 secondes
+            setTimeout(() => {
+                if (shutdownMessage.parentNode) {
+                    shutdownMessage.parentNode.removeChild(shutdownMessage);
+                }
+                // Ici vous pourriez ajouter une logique d'arrêt réelle
+                console.log('🔄 RetroOS arrêté');
+            }, 3000);
+        }
+    }
 }
 
 // Initialisation au chargement de la page
