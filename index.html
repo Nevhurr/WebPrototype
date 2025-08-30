@@ -9,7 +9,16 @@
 <body>
     <!-- Écran de chargement -->
     <div id="loading-screen">
-        <img src="images/icons/gameiconHD.png" alt="RetroOS" class="loading-logo">
+        <div class="boot-container">
+            <div class="boot-header">
+                <img src="images/icons/gameiconHD.png" alt="RetroOS" class="loading-logo">
+                <h1>NekoOS 5.0</h1>
+                <p>Loading system... Please wait</p>
+            </div>
+            <div class="boot-log" id="boot-log">
+                <!-- Les messages de boot apparaîtront ici -->
+            </div>
+        </div>
     </div>
     
     <!-- Curseur personnalisé -->
@@ -211,6 +220,6 @@
     </div>
     
     <!-- Scripts -->
-    <script src="script.js"></script>
+    <script type="module" src="script.js"></script>
 </body>
 </html>
